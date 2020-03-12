@@ -1,5 +1,10 @@
 <div class="eolzoom_block">
-<p>EolZoomXBlock: count is now
-    <span class='count'>{self.count}</span> (click me to increment).
-</p>
+    <h1>{{ xblock.display_name }}</h1>
+    <ul>
+        <li>{{ xblock.url }}</li>
+        <li>{{ xblock.date.date }}</li>
+        <li>{{ xblock.time }}</li>
+        <li>{{ xblock.description }}</li>
+    </ul>
+    <p>EolZoomXBlock </p>
 </div>

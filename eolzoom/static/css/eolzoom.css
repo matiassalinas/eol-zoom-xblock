@@ -1,0 +1,9 @@
+/* CSS for EolZoomXBlock */
+
+.eolzoom_block .count {
+    font-weight: bold;
+}
+
+.eolzoom_block p {
+    cursor: pointer;
+}

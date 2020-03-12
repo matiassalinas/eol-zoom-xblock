@@ -1,9 +1,53 @@
-/* CSS for EolZoomXBlock */
-
-.eolzoom_block .count {
-    font-weight: bold;
+.eolzoom_block {
+    font-family: "Roboto", sans-serif;
+    background: #ffffff;
+    text-align: center;
+    max-width: 360px;
+    margin: 10px auto;
+    padding: 45px;
+    box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
 }
 
 .eolzoom_block p {
+    margin-bottom: 1.41575em;
+}
+
+.eolzoom_block a.button {
+    text-transform: uppercase;
+    outline: 0;
+    background: #2d8cff;
+    display:block;
+    border: 0;
+    padding: 15px;
+    color: #FFFFFF;
+    font-size: 14px;
+    -webkit-transition: all 0.3 ease;
+    transition: all 0.3 ease;
     cursor: pointer;
+    text-decoration: none;
+}
+.eolzoom_block a.button:hover,.eolzoom_block a.button:active,.eolzoom_block a.button:focus {
+    background: #0f68d6;
+    color: #FFFFFF;
+}
+
+.eolzoom_block img {
+    max-height: 35px;
+    margin: -5px auto 25px;
+    display: block;
+}
+
+.eolzoom_block .eolzoom_title {
+    font-size: 1.5em;
+    font-weight: 300;
+    text-align: center;
+}
+
+.eolzoom_block .eolzoom_detail {
+    font-size: 1em;
+    text-align: justify;
+}
+
+.eolzoom_block .eolzoom_detail span.fa{
+    margin-right:10px;
 }

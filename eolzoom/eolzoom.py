@@ -44,8 +44,6 @@ class EolZoomXBlock(StudioEditableXBlockMixin, XBlock):
 
     description = String(
         display_name=_("Descripcion"),
-        multiline_editor='html', 
-        resettable_editor=True,
         scope=Scope.settings,
         help=_("Indica una breve descripcion de la videollamada")
     )
@@ -68,7 +66,8 @@ class EolZoomXBlock(StudioEditableXBlockMixin, XBlock):
 
     def get_context(self):
         return {
-            'xblock': self
+            'xblock': self,
+            'zoom_logo_path' : self.runtime.local_resource_url(self, "static/images/ZoomLogo.png")
         }
 
     def render_template(self, template_path, context):

@@ -6,6 +6,7 @@
     margin: 10px auto;
     padding: 45px;
     box-shadow: 0 0 20px 0 rgba(0, 0, 0, 0.2), 0 5px 5px 0 rgba(0, 0, 0, 0.24);
+    border-radius: 20px;
 }
 
 .eolzoom_block p {
@@ -51,3 +52,44 @@
 .eolzoom_block .eolzoom_detail span.fa{
     margin-right:10px;
 }
+
+.eolzoom_block .eolzoom_error {
+    color: #FF5722;
+    text-align: center;
+    font-weight: 100;
+}
+
+.eolzoom_block .eolzoom_error.contact {
+    color: #6d6c6c;
+}
+
+
+/*
+ Author view
+*/
+
+.eolzoom_author .alert {
+  position: relative;
+  font-style: italic;
+  padding: .75rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+  margin-bottom: 1em;
+}
+
+.eolzoom_author .alert-info {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24 !important;
+}
+
+.eolzoom_author a {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.eolzoom_author .alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724 !important;
+  }

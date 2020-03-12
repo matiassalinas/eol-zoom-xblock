@@ -1,0 +1,26 @@
+<div class="eolzoom_author">
+    {% if not status %}
+        <div class="alert alert-info">
+            <p>El componente <strong>no se ha configurado correctamente</strong>.</p>
+            <p>Edita nuevamente, y revisa que todos los campos se han rellenado.</p>
+            <p>Recuerda que el enlace a la sesión de Zoom lo puedes generar ingresando a <a href="https://reuna.zoom.us/" target="__blank">EOL ZOOM</a></p>
+        </div>
+    {% else %}
+        <div class="alert alert-success">
+            <p>El componente ya está configurado.</p>
+        </div>
+    {% endif %}
+</div> 
+
+<div class="eolzoom_block">
+    <img src="{{ zoom_logo_path }}" alt="Zoom-Logo" />
+    {% if status %}
+        <p class="eolzoom_title">{{ xblock.display_name | safe}}</p>
+        <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>{{ xblock.date.date }} - {{ xblock.time }}</p>
+        <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-info-circle" aria-hidden="true"></span>{{ xblock.description | safe}}</p>
+        <a href="{{ xblock.url }}" target="__blank" class="button">INGRESAR A LA SALA</a>
+    {% else %}
+        <p class="eolzoom_error">La sesión de Zoom no ha sido configurada correctamente. </p>
+        <p class="eolzoom_error contact">Contáctate con alguien del equipo docente para solucionar el problema.</p>
+    {% endif %}
+</div>

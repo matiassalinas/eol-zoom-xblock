@@ -37,6 +37,9 @@ setup(
     entry_points={
         'xblock.v1': [
             'eolzoom = eolzoom:EolZoomXBlock',
+        ],
+        "lms.djangoapp": [
+            "eolzoom = eolzoom.apps:EolZoomConfig",
         ]
     },
     package_data=package_data("eolzoom", ["static", "public"]),

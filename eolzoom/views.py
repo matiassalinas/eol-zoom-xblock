@@ -16,6 +16,8 @@ from models import EolZoomAuth
 import logging
 logger = logging.getLogger(__name__)
 
+#TODO: Revisar validez de un refresh token
+
 
 def zoom_api(request):
     """

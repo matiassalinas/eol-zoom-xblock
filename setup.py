@@ -40,6 +40,9 @@ setup(
         ],
         "lms.djangoapp": [
             "eolzoom = eolzoom.apps:EolZoomConfig",
+        ],
+        "lms.djangoapp": [
+            "eolzoom = eolzoom.apps:EolZoomConfig",
         ]
     },
     package_data=package_data("eolzoom", ["static", "public"]),

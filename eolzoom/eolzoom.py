@@ -7,10 +7,11 @@ from xblock.fields import Integer, Scope, String, DateTime
 from xblock.fragment import Fragment
 from xblockutils.studio_editable import StudioEditableXBlockMixin
 
+
 # Make '_' a no-op so we can scrape strings
 _ = lambda text: text
 
-class EolZoomXBlock(StudioEditableXBlockMixin, XBlock):
+class EolZoomXBlock(XBlock):
 
     display_name = String(
         display_name=_("Titulo"),
@@ -48,7 +49,6 @@ class EolZoomXBlock(StudioEditableXBlockMixin, XBlock):
         help=_("Indica una breve descripcion de la videollamada")
     )
 
-    editable_fields = ('display_name', 'url', 'date', 'time', 'description',)
     has_author_view = True
 
     def resource_string(self, path):
@@ -64,6 +64,16 @@ class EolZoomXBlock(StudioEditableXBlockMixin, XBlock):
         frag.add_javascript(self.resource_string("static/js/src/eolzoom.js"))
         frag.initialize_js('EolZoomXBlock')
         return frag
+        
+    def studio_view(self, context=None):
+        context_html = self.get_context()
+        template = self.render_template('static/html/studio.html', context_html)
+        frag = Fragment(template)
+        frag.add_css(self.resource_string("static/css/eolzoom.css"))
+        frag.add_javascript(self.resource_string("static/js/src/studio.js"))
+        frag.initialize_js('EolZoomStudioXBlock')
+        return frag
+
 
     def author_view(self, context=None):
         context_html = self.get_context()

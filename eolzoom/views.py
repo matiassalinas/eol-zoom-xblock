@@ -37,7 +37,6 @@ def zoom_api(request):
 
     token = get_refresh_token(authorization_code, redirect_uri)
     if 'error' in token:
-        logger.error("ERROR " + token['error']) # invalid request
         return HttpResponse(status=400)
 
     _update_auth(user, token['refresh_token'])
@@ -69,10 +68,44 @@ def user_profile(request):
         if 'code' in user_profile:
             return HttpResponse(status=400)
 
+        logger.warning(user_profile)
         # TODO: Send user_profile data
         return HttpResponse(status=200)
     else:
         return HttpResponse(status=401)
+
+def new_scheluded_meeting(request):
+    user = request.user
+    refresh_token = _get_refresh_token(user)
+    token = get_access_token(user,refresh_token)
+    access_token = token['access_token']
+    #if request.method != "POST":
+    #    return HttpResponse(status=400)
+    user_id = "me"
+    topic = "example_topic API"
+    ttype = 2
+    start_time = "2020-03-20T20:20:00"
+    duration = 120
+    timezone = "America/Santiago"
+    agenda = "description example"
+    body = {
+        "topic"     : topic,
+        "type"      : ttype,
+        "start_time": start_time,
+        "duration"  : duration,
+        "timezone"  : timezone,
+        "agenda"    : agenda,
+    }
+    url = "https://api.zoom.us/v2/users/{}/meetings".format(user_id)
+    headers = {
+        "Authorization" : "Bearer {}".format(access_token),
+        "Content-Type"  : "application/json"
+    }
+    r = requests.post(url, data=json.dumps(body), headers=headers)
+    logger.warning(r.json())
+    logger.warning(body)
+    return HttpResponse(status=201)
+
 
 def get_access_token(user, refresh_token):
     """
@@ -89,6 +122,7 @@ def get_access_token(user, refresh_token):
     }
     r = requests.post(url, headers=headers)
     token = r.json()
+    logger.warning(token)
     if 'error' not in token:
         _update_auth(user, token['refresh_token']) # Update refresh_token
     return token
@@ -141,7 +175,6 @@ def get_user_profile(access_token):
     """
         Using an Access Token to get User profile
     """
-    logger.warning(access_token)
     headers = {
         'Authorization' : 'Bearer  {}'.format(access_token)
     }

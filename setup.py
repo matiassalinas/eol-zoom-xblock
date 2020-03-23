@@ -41,7 +41,7 @@ setup(
         "lms.djangoapp": [
             "eolzoom = eolzoom.apps:EolZoomConfig",
         ],
-        "lms.djangoapp": [
+        "cms.djangoapp": [
             "eolzoom = eolzoom.apps:EolZoomConfig",
         ]
     },

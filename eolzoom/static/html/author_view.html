@@ -1,4 +1,3 @@
-{{xblock.runtime.user_id}}
 <div class="eolzoom_author">
     {% if not status %}
         <div class="alert alert-info">
@@ -17,9 +16,9 @@
     <img class="zoom-logo" src="{{ zoom_logo_path }}" alt="Zoom-Logo" />
     {% if status %}
         <p class="eolzoom_title">{{ xblock.display_name | safe}}</p>
-        <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>{{ xblock.date.date }} - {{ xblock.time }}</p>
+        <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>{{ xblock.date }} - {{ xblock.time }}</p>
         <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-info-circle" aria-hidden="true"></span>{{ xblock.description | safe}}</p>
-        <a href="{{ xblock.url }}" target="__blank" class="button">INGRESAR A LA SALA</a>
+        <a href="http://zoom.us/j/{{ xblock.meeting_id }}" target="__blank" class="button">INGRESAR A LA SALA</a>
     {% else %}
         <p class="eolzoom_error">La sesión de Zoom no ha sido configurada correctamente. </p>
         <p class="eolzoom_error contact">Contáctate con alguien del equipo docente para solucionar el problema.</p>

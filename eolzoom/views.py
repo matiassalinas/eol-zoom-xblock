@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.contrib.auth.models import User
 
 from django.urls import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.conf import settings
 
 import requests
@@ -27,10 +27,13 @@ def zoom_api(request):
         Redirect to Studio EOL
     """
     # check method and params
+    logger.warning("LOGEANDO")
     if request.method != "GET":
         return HttpResponse(status=400)
     if 'code' not in request.GET or 'redirect' not in request.GET:
         return HttpResponse(status=400)
+    
+    logger.warning("LOGEANDO222")
 
     user = request.user
     authorization_code = request.GET.get('code')
@@ -43,8 +46,10 @@ def zoom_api(request):
 
     _update_auth(user, token['refresh_token'])
 
-    # TODO: Redirect to Studio
-    return HttpResponse(status=200)
+    logger.warning("REDIRECT " + redirect)
+    logger.warning("DECODE " + urllib.unquote(redirect))
+    logger.warning("pow(decode,2) " + urllib.unquote(urllib.unquote(redirect)))
+    return HttpResponseRedirect(redirect.replace(' ', '+'))
 
 def user_profile(request):
     """
@@ -76,20 +81,40 @@ def user_profile(request):
     else:
         return HttpResponse(status=401)
 
+def is_logged_zoom(request):
+    """
+        GET REQUEST
+        Get if user is logged in zoom
+    """
+    logger.warning("IS LOGGED ZOOM")
+    # check method
+    if request.method != "GET":
+        return HttpResponse(status=400)
+    user = request.user
+    is_logged = True if _get_refresh_token(user) != None else False
+    return JsonResponse({
+        'is_logged' : is_logged
+    })
+
 def new_scheluded_meeting(request):
+    # check method and params
+    if request.method != "POST":
+        return HttpResponse(status=400)
+    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST:
+        return HttpResponse(status=400)
     user = request.user
     refresh_token = _get_refresh_token(user)
     token = get_access_token(user,refresh_token)
+    if 'error' in token:
+        return HttpResponse(status=400)
     access_token = token['access_token']
-    #if request.method != "POST":
-    #    return HttpResponse(status=400)
     user_id = "me"
-    topic = "example_topic API"
+    topic = request.POST['display_name']
     ttype = 2
-    start_time = "2020-03-20T20:20:00"
-    duration = 120
+    start_time = '{}T{}:00'.format(request.POST['date'], request.POST['time'])
+    duration = request.POST['duration']
     timezone = "America/Santiago"
-    agenda = "description example"
+    agenda = request.POST['description']
     body = {
         "topic"     : topic,
         "type"      : ttype,
@@ -104,9 +129,12 @@ def new_scheluded_meeting(request):
         "Content-Type"  : "application/json"
     }
     r = requests.post(url, data=json.dumps(body), headers=headers)
-    logger.warning(r.json())
+    data = r.json()
     logger.warning(body)
-    return HttpResponse(status=201)
+    #return HttpResponse(status=201)
+    return JsonResponse({
+        'meeting_id' : data['id']
+    })
 
 
 def get_access_token(user, refresh_token):

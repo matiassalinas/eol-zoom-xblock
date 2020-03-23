@@ -1,45 +1,87 @@
 {% load i18n %}
 <style>
-    .add-xblock-component-button {
-        margin-right: 0 !important;
-        margin-bottom: 0 !important;
-        padding: 10px!important;
-        height: auto !important;
-        width:150px !important;
-        background: #2d8cff !important;
-        border-color: #2d8cff !important;
-    }
-    
-    .new-component {
-        padding:20px;
-    }
+  .add-xblock-component-button {
+      margin-right: 0 !important;
+      margin-bottom: 0 !important;
+      padding: 10px!important;
+      height: auto !important;
+      width:150px !important;
+      background: #2d8cff !important;
+      border-color: #2d8cff !important;
+  }
+  
+  .new-component {
+      padding:20px;
+  }
 
-    .zoom-hint {
-        font-weight: 200;
-        font-style: italic;
-        margin-top: 10px;
-    }
+  .zoom-hint {
+      font-weight: 200;
+      font-style: italic;
+      margin-top: 10px;
+  }
+
+  .zoom-hint-success {
+      color: #155724;
+      margin-top: 0px;
+  }
 </style>
-{{is_zoom_logged}}
-<div class="add-xblock-component new-component-item adding">
-    <div class="new-component">
-        <img class="zoom-logo" src="{{ zoom_logo_path }}" alt="Zoom-Logo" />
-      <ul class="new-component-type">
-          <li>
-            <a href="#" class="add-xblock-component-button zoom-login-btn"
-               data-category="categ" data-single-instance="hola"
-                >
-              Iniciar Sesión
-            </a>
-          </li>
-          <br>
-          <li>
-              <p class="zoom-hint">Debes iniciar sesión para crear una sala de reuniones programada.</p>
-          </li>
-      </ul>
-    </div>
-  </div>
+
 <div class="wrapper-comp-settings is-active editor-with-buttons" id="settings-tab">
+  <ul class="list-input settings-list">
+    <div class="add-xblock-component new-component-item adding logging-container">
+      <div class="new-component">
+          <img class="zoom-logo" src="{{ zoom_logo_path }}" alt="Zoom-Logo" />
+        <ul class="new-component-type">
+            <li>
+              <a href="#" class="add-xblock-component-button zoom-login-btn"
+                  data-category="categ" data-single-instance="hola"
+                  >
+                Iniciar Sesión
+              </a>
+            </li>
+            <br>
+            <li>
+                <p class="zoom-hint">Debes iniciar sesión para crear una sala de reuniones programada.</p>
+            </li>
+        </ul>
+      </div>
+    </div>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="display_name">Título</label>
+        <input class="input setting-input" name="display_name" id="display_name" value="{{xblock.display_name}}" minlength="3" type="text" />
+      </div>
+      <span class="tip setting-help">Ingresa un título para la videollamada</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="description">Descripción</label>
+        <input class="input setting-input" name="description" id="description" value="{{xblock.description}}" minlength="3" type="text" />
+      </div>
+      <span class="tip setting-help">Indica una breve descripcion de la videollamada</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="date">Fecha</label>
+        <input class="input setting-input" name="date" id="date" value='{{xblock.date|default_if_none:""}}' minlength="3" type="date" />
+      </div>
+      <span class="tip setting-help">Indica la fecha programada de la videollamada (en formato dd-mm-yyyy. Ejemplo: 19-02-2015)</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="time">Hora</label>
+        <input class="input setting-input" name="time" id="time" value="{{xblock.time}}" minlength="5" maxlength="5"  type="time" />
+      </div>
+      <span class="tip setting-help">Indica la hora de la videollamada (en formato HH:MM. Ejemplo: 14:30)</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="duration">Duración</label>
+        <input class="input setting-input" name="duration" id="duration" value="{{xblock.duration}}" type="number" />
+      </div>
+      <span class="tip setting-help">Duración de la videollamada (en minutos)</span>
+    </li>
+  </ul>
   <div class="xblock-actions">
     <ul>
       <li class="action-item">

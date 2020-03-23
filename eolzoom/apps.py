@@ -14,7 +14,13 @@ class EolZoomConfig(AppConfig):
                 PluginURLs.NAMESPACE: u'',
                 PluginURLs.REGEX: r'^',
                 PluginURLs.RELATIVE_PATH: u'urls',
-            }},
+            },
+            ProjectType.CMS: {
+                PluginURLs.NAMESPACE: u'',
+                PluginURLs.REGEX: r'^',
+                PluginURLs.RELATIVE_PATH: u'urls_cms',
+            }
+        },
         PluginSettings.CONFIG: {
             ProjectType.CMS: {
                 SettingsType.COMMON: {

@@ -93,3 +93,32 @@
     border-color: #c3e6cb;
     color: #155724 !important;
   }
+
+/*
+* Studio editor View
+*/
+
+.eolzoom_studio .add-xblock-component-button {
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 10px!important;
+    height: auto !important;
+    width:150px !important;
+    background: #2d8cff !important;
+    border-color: #2d8cff !important;
+}
+
+.eolzoom_studio .new-component {
+    padding:20px;
+}
+
+.eolzoom_studio .zoom-hint {
+    font-weight: 200;
+    font-style: italic;
+    margin-top: 10px;
+}
+
+.eolzoom_studio .zoom-hint-success {
+    color: #155724;
+    margin-top: 0px;
+}

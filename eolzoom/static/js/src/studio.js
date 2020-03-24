@@ -76,7 +76,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
 
         function get_login_url() {
             actual_url = encodeURIComponent(window.location.href);
-            redirect_uri = encodeURIComponent(window.location.protocol + "//" + window.location.hostname + settings.url_login)+ "?redirect=" + actual_url;
+            //redirect_uri = encodeURIComponent(window.location.protocol + "//" + window.location.hostname + settings.url_login)+ "?redirect=" + actual_url;
+            redirect_uri = encodeURIComponent(window.location.protocol + "//" + "eol.uchile.cl" + settings.url_login)+ "?redirect=" + actual_url;
             login_url = settings.url_zoom_api + redirect_uri ;
             console.log(login_url);
             $('.logging-container .zoom-login-btn').attr('href', login_url);

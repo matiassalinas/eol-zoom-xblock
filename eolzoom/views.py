@@ -40,15 +40,17 @@ def zoom_api(request):
     redirect = request.GET.get('redirect') # Studio EOL URL
     redirect_uri = request.build_absolute_uri().split('&code')[0] # build uri without code param
 
+    logger.warning("[ZOOM] REDIRECT " + redirect)
+    logger.warning("[ZOOM] DECODE " + urllib.unquote(redirect))
+    logger.warning("[ZOOM] pow(decode,2) " + urllib.unquote(urllib.unquote(redirect)))
+    
     token = get_refresh_token(authorization_code, redirect_uri)
     if 'error' in token:
+        logger.warning("[ZOOM] Token {}".format(token['error']))
         return HttpResponse(status=400)
 
     _update_auth(user, token['refresh_token'])
 
-    logger.warning("REDIRECT " + redirect)
-    logger.warning("DECODE " + urllib.unquote(redirect))
-    logger.warning("pow(decode,2) " + urllib.unquote(urllib.unquote(redirect)))
     return HttpResponseRedirect(redirect.replace(' ', '+'))
 
 def user_profile(request):

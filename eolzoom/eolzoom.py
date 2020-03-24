@@ -90,11 +90,13 @@ class EolZoomXBlock(XBlock):
         frag.add_javascript(self.resource_string("static/js/src/studio.js"))
 
         settings = {
+            'meeting_id': self.meeting_id,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': 'https://zoom.us/oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
             'url_new_meeting': reverse('new_scheduled_meeting'),
+            'url_update_meeting': reverse('update_scheduled_meeting'),
         }
         frag.initialize_js('EolZoomStudioXBlock', json_args=settings)
         return frag

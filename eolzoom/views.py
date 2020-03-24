@@ -103,12 +103,39 @@ def new_scheduled_meeting(request):
         Generate new scheduled meeting
         https://marketplace.zoom.us/docs/api-reference/zoom-api/meetings/meetingcreate
     """
-
     # check method and params
     if request.method != "POST":
         return HttpResponse(status=400)
     if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST:
         return HttpResponse(status=400)
+
+    user_id = 'me'
+    url = "https://api.zoom.us/v2/users/{}/meetings".format(user_id)
+
+    return set_scheduled_meeting(request, url, 'POST')
+
+
+def update_scheduled_meeting(request):
+    """
+        Update scheduled meeting already created
+    """
+
+    # check method and params
+    if request.method != "POST":
+        return HttpResponse(status=400)
+    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'meeting_id' not in request.POST:
+        return HttpResponse(status=400)
+
+    meeting_id = request.POST['meeting_id']
+    url = "https://api.zoom.us/v2/meetings/{}".format(meeting_id)
+
+    return set_scheduled_meeting(request, url, 'PATCH')
+
+
+def set_scheduled_meeting(request, url, api_method):
+    """
+        Set all attributes and create/update meeting
+    """
     user = request.user
     refresh_token = _get_refresh_token(user)
     token = get_access_token(user, refresh_token)
@@ -116,7 +143,6 @@ def new_scheduled_meeting(request):
         logger.error("Error get_access_token {}".format(token['error']))
         return HttpResponse(status=400)
     access_token = token['access_token']
-    user_id = "me"
     topic = request.POST['display_name']
     ttype = 2  # Scheluded Meeting
     start_time = '{}T{}:00'.format(
@@ -133,17 +159,31 @@ def new_scheduled_meeting(request):
         "timezone": timezone,
         "agenda": agenda,
     }
-    url = "https://api.zoom.us/v2/users/{}/meetings".format(user_id)
     headers = {
         "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
     }
-    r = requests.post(url, data=json.dumps(body), headers=headers)
-    data = r.json()
-    logger.warning(data)
-    # return HttpResponse(status=201)
+    if api_method == 'POST':
+        r = requests.post(
+            url,
+            data=json.dumps(body),
+            headers=headers)  # CREATE
+        if r.status_code == 201:
+            data = r.json()
+            meeting_id = data['id']
+        else:
+            return HttpResponse(status=r.status_code)
+    elif api_method == 'PATCH':
+        r = requests.patch(
+            url,
+            data=json.dumps(body),
+            headers=headers)  # UPDATE
+        if r.status_code == 204:
+            meeting_id = request.POST['meeting_id']
+        else:
+            return HttpResponse(status=r.status_code)
     return JsonResponse({
-        'meeting_id': data['id']
+        'meeting_id': meeting_id
     })
 
 

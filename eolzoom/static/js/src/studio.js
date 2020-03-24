@@ -22,13 +22,21 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('date', date);
         form_data.append('time', time);
         form_data.append('duration', duration);
+        form_data.append('meeting_id', settings.meeting_id);
 
-        url_new_meeting = settings.url_new_meeting;
         /*
-        * Create meeting
+        * Set update meeting url if already have a meeting_id
+        */
+        if(settings.meeting_id) {
+            url_meeting = settings.url_update_meeting;
+        } else {
+            url_meeting = settings.url_new_meeting;
+        }
+        /*
+        * Create or Update meeting
         */
         $.ajax({
-            url: url_new_meeting,
+            url: url_meeting,
             dataType: 'text',
             cache: false,
             contentType: false,
@@ -40,7 +48,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                 * Update XBlock
                 */
                 data = JSON.parse(response)
-                form_data.append('meeting_id', data.meeting_id)
+                form_data.set('meeting_id', data.meeting_id) // update value
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
                 }
@@ -89,7 +97,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     $('.eolzoom_studio li').show();
                     $('.save-button').show();
                     $('.logging-container .zoom-login-btn').hide();
-                    $('.logging-container .zoom-hint').addClass('zoom-hint-success').text("Cuentas con una sesión de Zoom correctamente iniciada");
+                    $('.logging-container .zoom-hint').addClass('zoom-hint-success').html("<span>Cuentas con una sesión de Zoom correctamente iniciada<br>Si presentas problemas, presiona <a href='" + get_login_url() +  "' >este enlace.</a></span>");
                 }
             });
         }
@@ -102,6 +110,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             redirect_uri = encodeURIComponent(window.location.protocol + "//" + window.location.hostname + settings.url_login)+ "?redirect=" + actual_url;
             login_url = settings.url_zoom_api + redirect_uri ;
             $('.logging-container .zoom-login-btn').attr('href', login_url);
+            return login_url;
         }
 
     });

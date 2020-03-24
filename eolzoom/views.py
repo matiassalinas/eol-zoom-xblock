@@ -40,6 +40,7 @@ def zoom_api(request):
     redirect = request.GET.get('redirect') # Studio EOL URL
     redirect_uri = request.build_absolute_uri().split('&code')[0] # build uri without code param
 
+    logger.warning("[ZOOM] redirect_uri " + redirect_uri)
     logger.warning("[ZOOM] REDIRECT " + redirect)
     logger.warning("[ZOOM] DECODE " + urllib.unquote(redirect))
     logger.warning("[ZOOM] pow(decode,2) " + urllib.unquote(urllib.unquote(redirect)))

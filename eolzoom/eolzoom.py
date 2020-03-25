@@ -125,7 +125,8 @@ class EolZoomXBlock(XBlock):
                 self,
                 "static/images/ZoomLogo.png"),
             'status': status,
-            'is_zoom_logged': self.scope_ids.user_id}
+            'is_course_staff': getattr(self.xmodule_runtime, 'user_is_staff', False),
+        }
 
     def render_template(self, template_path, context):
         template_str = self.resource_string(template_path)

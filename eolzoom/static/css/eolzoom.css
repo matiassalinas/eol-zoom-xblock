@@ -16,20 +16,32 @@
 .eolzoom_block a.button {
     text-transform: uppercase;
     outline: 0;
-    background: #2d8cff;
     display:block;
     border: 0;
     padding: 15px;
-    color: #FFFFFF;
     font-size: 14px;
     -webkit-transition: all 0.3 ease;
     transition: all 0.3 ease;
     cursor: pointer;
     text-decoration: none;
 }
-.eolzoom_block a.button:hover,.eolzoom_block a.button:active,.eolzoom_block a.button:focus {
+.eolzoom_block a.button-blue {
+    background: #2d8cff;
+    color: #FFFFFF;
+}
+.eolzoom_block a.button-blue:hover,.eolzoom_block a.button-blue:active,.eolzoom_block a.button-blue:focus {
     background: #0f68d6;
     color: #FFFFFF;
+}
+
+.eolzoom_block a.button-green {
+    background: #d4edda;
+    color: #155724;
+    margin-bottom: 20px;
+}
+.eolzoom_block a.button-green:hover,.eolzoom_block a.button-green:active,.eolzoom_block a.button-green:focus {
+    background: #c3e6cb;
+    color: #155724;
 }
 
 .zoom-logo {

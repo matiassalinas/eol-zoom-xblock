@@ -22,7 +22,7 @@
         <p class="eolzoom_title">{{ xblock.display_name | safe}}</p>
         <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>Fecha: {{ xblock.date }} - {{ xblock.time }}</p>
         <p class="eolzoom_detail"><span class="fa fa-info-circle" aria-hidden="true"></span>Descripción: {{ xblock.description | safe}}</p>
-        <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-clock-o" aria-hidden="true"></span>Duración de la transmisión: {{ xblock.duration }} minutos</p>
+        <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-clock-o" aria-hidden="true"></span>Duración estimada: {{ xblock.duration }} minutos</p>
         <a href="https://reuna.zoom.us/s/{{ xblock.meeting_id }}" target="__blank" class="button button-green">INICIAR TRANSMISIÓN</a>
         <a href="https://reuna.zoom.us/j/{{ xblock.meeting_id }}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
     {% else %}

@@ -77,7 +77,7 @@
   margin-bottom: 1em;
 }
 
-.eolzoom_author .alert-info {
+.eolzoom_author .alert-warning {
   background-color: #f8d7da;
   border-color: #f5c6cb;
   color: #721c24 !important;
@@ -92,6 +92,12 @@
     background-color: #d4edda;
     border-color: #c3e6cb;
     color: #155724 !important;
+}
+
+.eolzoom_author .alert-info {
+    background-color: #cce5ff;
+    border-color: #b8daff;
+    color: #004085 !important;
   }
 
 /*

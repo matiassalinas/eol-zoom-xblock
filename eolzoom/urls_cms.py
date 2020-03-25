@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from django.conf.urls import url
 from django.conf import settings
 
-from .views import zoom_api, user_profile, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting
+from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting
 
 from django.contrib.auth.decorators import login_required
 
@@ -12,11 +12,6 @@ urlpatterns = (
         r'zoom/api',
         login_required(zoom_api),
         name='zoom_api',
-    ),
-    url(
-        r'zoom/user_profile$',
-        login_required(user_profile),
-        name='user_profile',
     ),
     url(
         r'zoom/is_logged',

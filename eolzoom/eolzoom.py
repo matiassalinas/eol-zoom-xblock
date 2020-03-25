@@ -64,6 +64,11 @@ class EolZoomXBlock(XBlock):
         help=_("Duracion de la videollamada")
     )
 
+    created_by = String(
+        display_name=_("Created By"),
+        scope=Scope.settings,
+    )
+
     has_author_view = True
 
     def resource_string(self, path):
@@ -91,6 +96,7 @@ class EolZoomXBlock(XBlock):
 
         settings = {
             'meeting_id': self.meeting_id,
+            'created_by': self.created_by,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': 'https://zoom.us/oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
@@ -133,6 +139,7 @@ class EolZoomXBlock(XBlock):
         self.date = request.params['date']
         self.time = request.params['time']
         self.duration = request.params['duration']
+        self.created_by = request.params['created_by']
         self.meeting_id = request.params['meeting_id']
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')
@@ -147,7 +154,8 @@ class EolZoomXBlock(XBlock):
             is_empty(self.date) or
             is_empty(self.time) or
             is_empty(self.description) or
-            is_empty(self.duration)
+            is_empty(self.duration) or
+            is_empty(self.created_by)
         )
 
     @staticmethod

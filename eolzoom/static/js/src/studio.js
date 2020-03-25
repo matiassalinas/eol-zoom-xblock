@@ -12,6 +12,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var date = $(element).find('input[name=date]').val();
         var time = $(element).find('input[name=time]').val();
         var duration = $(element).find('input[name=duration]').val();
+        var created_by = $(element).find('#created_by').text();
         if(display_name == "" || description == "" || date == "" || time == "" || duration < 0 || duration == "") {
             alert("Datos inválidos. Revisa nuevamente la información ingresada");
             e.preventDefault();
@@ -22,6 +23,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('date', date);
         form_data.append('time', time);
         form_data.append('duration', duration);
+        form_data.append('created_by', created_by);
         form_data.append('meeting_id', settings.meeting_id);
 
         /*
@@ -79,26 +81,45 @@ function EolZoomStudioXBlock(runtime, element, settings) {
     });
 
     $(function($) {
-        // Hide sve button and form when user not logged
+        var zoom_plan = {
+            1: 'Basic',
+            2: 'Licensed',
+            3: 'On-prem'
+        }
+        // Show loading and hide elements
+        $('.eolzoom_loading').show();
+        $('.eolzoom_studio').hide();
         $('.eolzoom_studio li.field').hide();
         $('.save-button').hide();
 
         check_is_logged();
         get_login_url();
-
         function check_is_logged() {
             /*
             * Check if user is logged at Eol Zoom API
             */
             url = settings.url_is_logged_zoom;
-            $.get(url, function(data, status){
-                if(data.is_logged) {
+            $.get(url, function(user_profile, status){
+                if(user_profile) {
                     // Show submit button and form whem user is succefully logged
-                    $('.eolzoom_studio li').show();
-                    $('.save-button').show();
                     $('.logging-container .zoom-login-btn').hide();
-                    $('.logging-container .zoom-hint').addClass('zoom-hint-success').html("<span>Cuentas con una sesión de Zoom correctamente iniciada<br>Si presentas problemas, presiona <a href='" + get_login_url() +  "' >este enlace.</a></span>");
+                    $('.logging-container .zoom-hint').addClass('zoom-hint-success').html("<span>Cuentas con una sesión de Zoom correctamente iniciada</span>");
+                    $('.logging-container .zoom-hint').append("<br><span style='color: black;'>Tu cuenta ( <span id='created_by'>" + user_profile.email + "</span> ) tiene una licencia " + zoom_plan[user_profile.type] + "</span>");
+                    $('.logging-container .zoom-hint').append("<br><span style='color: black;'>Si presentas problemas, presiona <a href='" + get_login_url() +  "' >este enlace.</a></span>");
+                    /*
+                    * Show content if meeting is not already created 
+                    * if meeting is already created, show only if user is the owner of this meeting
+                    */ 
+                    if(!settings.meeting_id || settings.created_by == user_profile.email) {
+                        $('.eolzoom_studio li').show();
+                        $('.save-button').show();
+                    } else {
+                        $('.logging-container').html("No tienes permisos para modificar esta transmisión.");
+                    }
                 }
+            }).always(function() {
+                $('.eolzoom_loading').hide();
+                $('.eolzoom_studio').show();
             });
         }
 

@@ -48,54 +48,17 @@ def zoom_api(request):
     return HttpResponseRedirect(redirect.replace(' ', '+'))
 
 
-def user_profile(request):
-    """
-        GET REQUEST
-        Check if user already have a refresh token in Models
-        Get access token from Zoom Api (and update refresh token in Models)
-        Get User Profile from Zoom Api
-    """
-    # check method
-    if request.method != "GET":
-        return HttpResponse(status=400)
-
-    user = request.user
-    refresh_token = _get_refresh_token(user)
-    # check if refresh token exists
-    if refresh_token:
-        token = get_access_token(user, refresh_token)
-        if 'error' in token:
-            logger.error("Error get_access_token {}".format(token['error']))
-            return HttpResponse(status=400)
-        access_token = token['access_token']
-
-        user_profile = get_user_profile(access_token)
-        if 'code' in user_profile:
-            logger.error(
-                "Error get_user_profile {}".format(
-                    user_profile['code']))
-            return HttpResponse(status=400)
-
-        # TODO: Send user_profile data
-        return HttpResponse(status=200)
-    else:
-        logger.warning("Access Token Not Found")
-        return HttpResponse(status=401)
-
-
 def is_logged_zoom(request):
     """
         GET REQUEST
-        Get if user is logged in zoom
+        Get if user is logged in zoom and profile data
     """
     # check method
     if request.method != "GET":
         return HttpResponse(status=400)
     user = request.user
-    is_logged = True if _get_refresh_token(user) is not None else False
-    return JsonResponse({
-        'is_logged': is_logged
-    })
+    user_profile = _get_user_profile(user)
+    return JsonResponse(user_profile)
 
 
 def new_scheduled_meeting(request):
@@ -252,6 +215,33 @@ def _update_auth(user, refresh_token):
             user=user,
             zoom_refresh_token=refresh_token
         )
+
+
+def _get_user_profile(user):
+    """
+        Get user profile
+        Return is_logged, user_profile
+    """
+    refresh_token = _get_refresh_token(user)
+    # check if refresh token exists
+    if refresh_token:
+        token = get_access_token(user, refresh_token)
+        if 'error' in token:
+            logger.error("Error get_access_token {}".format(token['error']))
+            return None
+        access_token = token['access_token']
+
+        user_profile = get_user_profile(access_token)
+        if 'code' in user_profile:
+            logger.error(
+                "Error get_user_profile {}".format(
+                    user_profile['code']))
+            return None
+
+        return user_profile
+    else:
+        logger.warning("Access Token Not Found")
+        return None
 
 
 def get_user_profile(access_token):

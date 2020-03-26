@@ -16,8 +16,6 @@ from models import EolZoomAuth
 import logging
 logger = logging.getLogger(__name__)
 
-# TODO: Revisar validez de un refresh token
-
 
 def zoom_api(request):
     """
@@ -58,7 +56,7 @@ def is_logged_zoom(request):
         return HttpResponse(status=400)
     user = request.user
     user_profile = _get_user_profile(user)
-    return JsonResponse(user_profile)
+    return JsonResponse(user_profile, safe=False)
 
 
 def new_scheduled_meeting(request):

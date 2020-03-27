@@ -69,6 +69,11 @@ class EolZoomXBlock(XBlock):
         scope=Scope.settings,
     )
 
+    created_location = String(
+        display_name=_("XBlock Location when Meet is Created"),
+        scope=Scope.settings,
+    )
+
     has_author_view = True
 
     def resource_string(self, path):
@@ -145,6 +150,7 @@ class EolZoomXBlock(XBlock):
         self.duration = request.params['duration']
         self.created_by = request.params['created_by']
         self.meeting_id = request.params['meeting_id']
+        self.created_location = self.location._to_string()
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')
 
@@ -153,6 +159,7 @@ class EolZoomXBlock(XBlock):
             Return false if at least one attribute is empty
         """
         return not (
+            is_empty(self.check_location()) or
             is_empty(self.display_name) or
             is_empty(self.meeting_id) or
             is_empty(self.date) or
@@ -161,6 +168,32 @@ class EolZoomXBlock(XBlock):
             is_empty(self.duration) or
             is_empty(self.created_by)
         )
+
+    def check_location(self):
+        """
+            Check if created_location is the same of the actual location of the XBlock
+            Clear 'meeting_id', 'created_by and 'created_location'
+            When re-run a course will enforce new configuration
+        """
+        if(self.created_location != self.location._to_string()):
+            self.created_location = None
+            self.meeting_id = None
+            self.created_by = None
+        return self.created_location
+
+    @classmethod
+    def parse_xml(cls, node, runtime, keys, id_generator):
+        """
+            Override default serialization at Course Export
+            Clear 'meeting_id' and 'created_by' attributes (force to configure and start new meetings)
+        """
+        block = runtime.construct_xblock_from_class(cls, keys)
+
+        for name, value in node.items():  # lxml has no iteritems
+            if(name != 'meeting_id' and name != 'created_by' and name != 'created_location'):
+                cls._set_field_if_present(block, name, value, {})
+
+        return block
 
     @staticmethod
     def workbench_scenarios():

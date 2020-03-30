@@ -1,4 +1,7 @@
 # EOL Zoom XBlock
+
+![https://github.com/eol-uchile/eol-zoom-xblock/actions](https://github.com/eol-uchile/eol-zoom-xblock/workflows/Python%20application/badge.svg)
+
 XBlock and API to integrate zoom with the Open edX LMS. Editable within Open edx Studio.
 
 # Install

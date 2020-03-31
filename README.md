@@ -6,8 +6,8 @@ XBlock and API to integrate zoom with the Open edX LMS. Editable within Open edx
 
 # Install
 
-    docker-compose exec cms pip install -e /openedx/requirements/eol-zoom-xblock
-    docker-compose exec lms pip install -e /openedx/requirements/eol-zoom-xblock
+    docker-compose exec cms pip install -e /openedx/requirements/eolzoom
+    docker-compose exec lms pip install -e /openedx/requirements/eolzoom
     docker-compose exec lms python manage.py lms --settings=tutor.production makemigrations
     docker-compose exec lms python manage.py lms --settings=tutor.production migrate
 
@@ -19,6 +19,12 @@ To enable [Zoom API](https://marketplace.zoom.us/docs/guides) Edit *production.p
     EOLZOOM_CLIENT_ID = AUTH_TOKENS.get('EOLZOOM_CLIENT_ID', '')
     EOLZOOM_CLIENT_SECRET = AUTH_TOKENS.get('EOLZOOM_CLIENT_SECRET', '')
     EOLZOOM_AUTHORIZATION = base64.b64encode('{}:{}'.format(EOLZOOM_CLIENT_ID, EOLZOOM_CLIENT_SECRET))
+
+## TESTS
+**Prepare tests:**
+
+    > cd .github/
+    > docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
 
 # Screenshots
 *Last Update 26/03/2020*

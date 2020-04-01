@@ -218,7 +218,7 @@ def _update_auth(user, refresh_token):
 def _get_user_profile(user):
     """
         Get user profile
-        Return is_logged, user_profile
+        Return user_profile
     """
     refresh_token = _get_refresh_token(user)
     # check if refresh token exists

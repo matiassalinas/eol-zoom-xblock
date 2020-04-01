@@ -82,7 +82,7 @@ class EolZoomXBlock(XBlock):
         return data.decode("utf8")
 
     def student_view(self, context=None):
-        context_html = self.get_context()
+        context_html = self.get_context(is_lms=True)
         template = self.render_template(
             'static/html/eolzoom.html', context_html)
         frag = Fragment(template)
@@ -120,10 +120,10 @@ class EolZoomXBlock(XBlock):
         frag.add_css(self.resource_string("static/css/eolzoom.css"))
         return frag
 
-    def get_context(self):
+    def get_context(self, is_lms=False):
         # Status: false (at least one attribute is empty), true (all attributes
         # have content)
-        status = self.get_status()
+        status = self.get_status(is_lms)
         return {
             'xblock': self,
             'zoom_logo_path': self.runtime.local_resource_url(
@@ -154,12 +154,12 @@ class EolZoomXBlock(XBlock):
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')
 
-    def get_status(self):
+    def get_status(self, is_lms):
         """
             Return false if at least one attribute is empty
         """
         return not (
-            is_empty(self.check_location()) or
+            is_empty(self.check_location(is_lms)) or
             is_empty(self.display_name) or
             is_empty(self.meeting_id) or
             is_empty(self.date) or
@@ -169,13 +169,16 @@ class EolZoomXBlock(XBlock):
             is_empty(self.created_by)
         )
 
-    def check_location(self):
+    def check_location(self, is_lms):
         """
             Check if created_location is the same of the actual location of the XBlock
             Clear 'meeting_id', 'created_by and 'created_location'
             When re-run a course will enforce new configuration
         """
         if(self.created_location != self.location._to_string()):
+            # Can't make changes in lms (only read mode)
+            if is_lms:
+                return None
             self.created_location = None
             self.meeting_id = None
             self.created_by = None

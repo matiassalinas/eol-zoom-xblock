@@ -104,7 +104,8 @@ class EolZoomXBlock(XBlock):
             'created_by': self.created_by,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
-            'url_zoom_api': 'https://zoom.us/oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
+            'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
+                DJANGO_SETTINGS.EOLZOOM_DOMAIN,
                 DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
             'url_new_meeting': reverse('new_scheduled_meeting'),
             'url_update_meeting': reverse('update_scheduled_meeting'),
@@ -126,6 +127,7 @@ class EolZoomXBlock(XBlock):
         status = self.get_status(is_lms)
         return {
             'xblock': self,
+            'EOLZOOM_DOMAIN': DJANGO_SETTINGS.EOLZOOM_DOMAIN,
             'zoom_logo_path': self.runtime.local_resource_url(
                 self,
                 "static/images/ZoomLogo.png"),

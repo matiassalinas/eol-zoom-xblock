@@ -10,7 +10,7 @@
             <p>El anfitrión de la transmisión es: <strong>{{xblock.created_by}}</strong></p>
         </div>
         <div class="alert alert-info">
-            <p>IMPORTANTE: Las modificaciones realizadas a través del sitio <a href="https://reuna.zoom.us/">Reuna Zoom</a> no se verán reflejadas en este componente.</p>
+            <p>IMPORTANTE: Las modificaciones realizadas a través del sitio <a href="{{ EOLZOOM_DOMAIN }}">UChile Zoom</a> no se verán reflejadas en este componente.</p>
             <p>ATENCIÓN: Sólo <strong>{{xblock.created_by}}</strong> podrá modificar este componente.</p>
         </div>
     {% endif %}
@@ -23,8 +23,8 @@
         <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>Fecha: {{ xblock.date }} - {{ xblock.time }}</p>
         <p class="eolzoom_detail"><span class="fa fa-info-circle" aria-hidden="true"></span>Descripción: {{ xblock.description | safe}}</p>
         <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-clock-o" aria-hidden="true"></span>Duración estimada: {{ xblock.duration }} minutos</p>
-        <a href="https://reuna.zoom.us/s/{{ xblock.meeting_id }}" target="__blank" class="button button-green">INICIAR TRANSMISIÓN</a>
-        <a href="https://reuna.zoom.us/j/{{ xblock.meeting_id }}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
+        <a href="{{ EOLZOOM_DOMAIN }}s/{{ xblock.meeting_id }}" target="__blank" class="button button-green">INICIAR TRANSMISIÓN</a>
+        <a href="{{ EOLZOOM_DOMAIN }}j/{{ xblock.meeting_id }}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
     {% else %}
         <p class="eolzoom_error">La sesión de Zoom no ha sido configurada correctamente. </p>
         <p class="eolzoom_error contact">Contáctate con alguien del equipo docente para solucionar el problema.</p>

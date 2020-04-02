@@ -141,15 +141,15 @@ class EolZoomXBlock(XBlock):
         template = Template(template_str)
         return template.render(Context(context))
 
-    @XBlock.handler
-    def studio_submit(self, request, suffix=''):
-        self.display_name = request.params['display_name']
-        self.description = request.params['description']
-        self.date = request.params['date']
-        self.time = request.params['time']
-        self.duration = request.params['duration']
-        self.created_by = request.params['created_by']
-        self.meeting_id = request.params['meeting_id']
+    @XBlock.json_handler
+    def studio_submit(self, data, suffix=''):
+        self.display_name = data.get('display_name')
+        self.description = data.get('description')
+        self.date = data.get('date')
+        self.time = data.get('time')
+        self.duration = data.get('duration')
+        self.created_by = data.get('created_by')
+        self.meeting_id = data.get('meeting_id')
         self.created_location = self.location._to_string()
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')

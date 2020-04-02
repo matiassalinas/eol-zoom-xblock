@@ -17,12 +17,25 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from xblock.field_data import DictFieldData
+from student.roles import CourseStaffRole
+
+from .eolzoom import EolZoomXBlock
 
 import views
 from models import EolZoomAuth
 
 import logging
 logger = logging.getLogger(__name__)
+
+class TestRequest(object):
+    # pylint: disable=too-few-public-methods
+    """
+    Module helper for @json_handler
+    """
+    method = None
+    body = None
+    success = None
 
 class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
@@ -36,10 +49,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             email = 'student@edx.org'
             password = 'test'
 
-            # Create the student
+            # Create the user
             self.user = UserFactory(username=uname, password=password, email=email)
 
-            # Log the student in
+            # Log the user in
             self.client = Client()
             assert_true(self.client.login(username=uname, password=password))
 
@@ -284,5 +297,184 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         response = self.client.get(reverse('zoom_api'), get_data)
         self.assertEqual(response.status_code, 302)
 
+class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
+
+    def make_an_xblock(self, **kw):
+        """
+        Helper method that creates a EolZoom XBlock
+        """
+        course = self.course
+        runtime = Mock(
+            course_id=course.id,
+            user_is_staff=True,
+            service=Mock(
+                return_value=Mock(_catalog={}),
+            ),
+        )
+        scope_ids = Mock()
+        field_data = DictFieldData(kw)
+        xblock = EolZoomXBlock(runtime, field_data, scope_ids)
+        xblock.xmodule_runtime = runtime
+        xblock.location = course.id # Example of location
+        return xblock
 
 
+    def setUp(self):
+
+        super(TestEolZoomXBlock, self).setUp()
+
+        # create a course
+        self.course = CourseFactory.create(org='mss', course='999',
+                                           display_name='eolzoom tests')
+
+        # create eolzoom Xblock
+        self.xblock = self.make_an_xblock()
+        # Patch the comment client user save method so it does not try
+        # to create a new cc user when creating a django user
+        with patch('student.models.cc.User.save'):
+            uname = 'student'
+            email = 'student@edx.org'
+            password = 'test'
+
+            # Create and enroll student
+            self.student = UserFactory(username=uname, password=password, email=email)
+            CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
+
+            # Create and Enroll staff user
+            self.staff_user = UserFactory(username='staff_user', password='test', email='staff@edx.org', is_staff=True)
+            CourseEnrollmentFactory(user=self.staff_user, course_id=self.course.id)
+            CourseStaffRole(self.course.id).add_users(self.staff_user)
+
+            # Log the student in
+            self.client = Client()
+            assert_true(self.client.login(username=uname, password=password))
+
+            # Log the user staff in
+            self.staff_client = Client()
+            assert_true(self.staff_client.login(username='staff_user', password='test'))
+            
+            # Create refresh_token
+            self.zoom_auth = EolZoomAuth.objects.create(
+                user=self.staff_user,
+                zoom_refresh_token='test_refresh_token'
+            )
+
+
+    def test_workbench_scenarios(self):
+        """
+            Checks workbench scenarios title and basic scenario
+        """
+        result_title = 'EolZoomXBlock'
+        basic_scenario = "<eolzoom/>"
+        test_result = self.xblock.workbench_scenarios()
+        self.assertEqual(result_title, test_result[0][0])
+        self.assertIn(basic_scenario, test_result[0][1])
+    
+    def test_validate_default_field_data(self):
+        """
+            Validate that xblock is created successfully
+        """
+        self.assertEqual(self.xblock.display_name, 'Videollamada Zoom')
+        self.assertEqual(self.xblock.meeting_id, None)
+        self.assertEqual(self.xblock.date, None)
+        self.assertEqual(self.xblock.time, None)
+        self.assertEqual(self.xblock.description, None)
+        self.assertEqual(self.xblock.duration, 40)
+        self.assertEqual(self.xblock.created_by, None)
+        self.assertEqual(self.xblock.created_location, None)
+
+    def test_student_view_without_configuration(self):
+        """
+            Check if error message is triggered when a meeting is not configured
+        """
+        student_view = self.xblock.student_view()
+        student_view_html = student_view.content
+        self.assertIn('class="eolzoom_error"', student_view_html)
+
+    def test_student_view_with_configuration(self):
+        """
+            Check if error message is not triggered when a meeting is successfully configured
+            Have two cases of page render:
+            1. Staff user
+            2. Student user
+        """
+        self.xblock.meeting_id = 'meeting_id'
+        self.xblock.date = '2020-12-26'
+        self.xblock.time = '23:32'
+        self.xblock.description = 'description'
+        self.xblock.duration = 120
+        self.xblock.created_by = self.staff_user.id
+        self.xblock.created_location = self.xblock.location._to_string()
+
+        # 1. Staff user 
+        self.xblock.runtime.user_is_staff = True
+        student_staff_view = self.xblock.student_view()
+        student_staff_view_html = student_staff_view.content
+        self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
+        self.assertIn('class="button button-green"', student_staff_view_html) # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"', student_staff_view_html) # 'Ingresar a la sala' button
+
+        # 2. Student user
+        self.xblock.runtime.user_is_staff = False
+        student_view = self.xblock.student_view()
+        student_view_html = student_view.content
+        self.assertNotIn('class="eolzoom_error"', student_view_html)
+        self.assertNotIn('class="button button-green"', student_view_html) # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"', student_view_html) # 'Ingresar a la sala' button
+        
+
+    def test_author_view(self):
+        """
+            Test author view:
+            1. Without Configurations
+            2. Load correct html
+            3. With Configurations
+        """
+        # 1. Without Configurations
+        author_view = self.xblock.author_view()
+        author_view_html = author_view.content
+
+        self.assertIn('class="eolzoom_error"', author_view_html)
+
+        # 2. Load correct html
+        self.assertIn('class="eolzoom_author"', author_view_html)
+
+        # 3. With Configurations
+        self.xblock.meeting_id = 'meeting_id'
+        self.xblock.date = '2020-12-26'
+        self.xblock.time = '23:32'
+        self.xblock.description = 'description'
+        self.xblock.duration = 120
+        self.xblock.created_by = self.staff_user.id
+        self.xblock.created_location = self.xblock.location._to_string()
+
+        author_view = self.xblock.student_view()
+        author_view_html = author_view.content
+        self.assertNotIn('class="eolzoom_error"', author_view_html)
+        self.assertIn('class="button button-green"', author_view_html) # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"', author_view_html) # 'Ingresar a la sala' button
+
+    def test_studio_submit(self):
+        request = TestRequest()
+        request.method = 'POST'
+        post_data = {
+            'display_name' : 'new_display_name',
+            'description' : 'new_description',
+            'date' : '2020-10-10',
+            'time' : '10:10',
+            'duration' : 80,
+            'meeting_id' : 'new_meeting_id',
+            'created_by' : self.staff_user.id,
+            'created_location' : self.xblock.location._to_string()
+        }
+        data = json.dumps(post_data)
+        request.body = data
+        response = self.xblock.studio_submit(request)
+        self.assertEqual(self.xblock.display_name, 'new_display_name')
+        self.assertEqual(self.xblock.description, 'new_description')
+        self.assertEqual(self.xblock.date, '2020-10-10')
+        self.assertEqual(self.xblock.time, '10:10')
+        self.assertEqual(self.xblock.duration, 80)
+        self.assertEqual(self.xblock.meeting_id, 'new_meeting_id')
+        self.assertEqual(self.xblock.created_by, self.staff_user.id)
+        self.assertEqual(self.xblock.created_location, self.xblock.location._to_string())

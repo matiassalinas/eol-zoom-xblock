@@ -36,6 +36,7 @@ class TestRequest(object):
     method = None
     body = None
     success = None
+    params = None
 
 class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
@@ -469,6 +470,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         }
         data = json.dumps(post_data)
         request.body = data
+        request.params = post_data
         response = self.xblock.studio_submit(request)
         self.assertEqual(self.xblock.display_name, 'new_display_name')
         self.assertEqual(self.xblock.description, 'new_description')

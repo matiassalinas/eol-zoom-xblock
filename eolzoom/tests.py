@@ -28,6 +28,7 @@ from models import EolZoomAuth
 import logging
 logger = logging.getLogger(__name__)
 
+
 class TestRequest(object):
     # pylint: disable=too-few-public-methods
     """
@@ -37,6 +38,7 @@ class TestRequest(object):
     body = None
     success = None
     params = None
+
 
 class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
@@ -51,7 +53,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             password = 'test'
 
             # Create the user
-            self.user = UserFactory(username=uname, password=password, email=email)
+            self.user = UserFactory(
+                username=uname, password=password, email=email)
 
             # Log the user in
             self.client = Client()
@@ -67,7 +70,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         """
             Create and check; update and check refresh token
         """
-        new_student = UserFactory(username='test_student', password='test_password', email='test_email@email.email')
+        new_student = UserFactory(
+            username='test_student',
+            password='test_password',
+            email='test_email@email.email')
         views._update_auth(new_student, 'new_token')
         refresh_token = views._get_refresh_token(new_student)
         self.assertEqual(refresh_token, 'new_token')
@@ -75,7 +81,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         views._update_auth(new_student, 'update_token')
         refresh_token = views._get_refresh_token(new_student)
         self.assertEqual(refresh_token, 'update_token')
-    
+
     def test_get_refresh_token_from_models(self):
         """
             Test get refresh token with two student
@@ -85,7 +91,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         refresh_token = views._get_refresh_token(self.user)
         self.assertEqual(refresh_token, 'test_refresh_token')
 
-        new_student = UserFactory(username='test_student', password='test_password', email='test_email@email.email')
+        new_student = UserFactory(
+            username='test_student',
+            password='test_password',
+            email='test_email@email.email')
         new_refresh_token = views._get_refresh_token(new_student)
         self.assertEqual(new_refresh_token, None)
 
@@ -103,8 +112,13 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read:admin"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:response), ]
-        new_refresh_token = views.get_refresh_token(authorization_code, redirect_uri)
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        new_refresh_token = views.get_refresh_token(
+            authorization_code, redirect_uri)
         self.assertEqual(new_refresh_token, response)
 
     @patch("requests.post")
@@ -120,14 +134,21 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:response), ]
-        new_token = views.get_access_token(self.user, self.zoom_auth.zoom_refresh_token)
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        new_token = views.get_access_token(
+            self.user, self.zoom_auth.zoom_refresh_token)
         self.assertEqual(new_token, response)
 
         zoom_auth = EolZoomAuth.objects.get(
             user=self.user
         )
-        self.assertEqual(zoom_auth.zoom_refresh_token, response['refresh_token'])
+        self.assertEqual(
+            zoom_auth.zoom_refresh_token,
+            response['refresh_token'])
 
     @patch("requests.get")
     def test_get_user_profile_from_zoom_api(self, get):
@@ -136,13 +157,17 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         """
         access_token = 'access_token'
         response = {
-            'id' : 'user_id',
-            'first_name' : 'first_name',
-            'last_name' : 'last_name',
-            'email' : 'email@email.email',
-            'type' : 'type',
+            'id': 'user_id',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'email': 'email@email.email',
+            'type': 'type',
         }
-        get.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:response), ]
+        get.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
         user_profile = views.get_user_profile(access_token)
         self.assertEqual(user_profile, response)
 
@@ -160,16 +185,24 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:access_token_response), ]
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:access_token_response), ]
         # GET User Profile
         user_profile_response = {
-            'id' : 'user_id',
-            'first_name' : 'first_name',
-            'last_name' : 'last_name',
-            'email' : 'email@email.email',
-            'type' : 'type',
+            'id': 'user_id',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'email': 'email@email.email',
+            'type': 'type',
         }
-        get.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:user_profile_response), ]
+        get.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:user_profile_response), ]
 
         user_profile = views._get_user_profile(self.user)
         self.assertEqual(user_profile, user_profile_response)
@@ -195,18 +228,26 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "duration": 40,
             "timezone": 'America/Santiago',
             "agenda": 'agenda',
-            "id" : 'meeting_id',
+            "id": 'meeting_id',
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:access_token_response), namedtuple("Request", ["status_code", "json"])(201, lambda:create_meeting_response),]
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:access_token_response), namedtuple(
+                    "Request", [
+                        "status_code", "json"])(
+                            201, lambda:create_meeting_response), ]
 
         post_data = {
-            'display_name' : 'display_name',
-            'description' : 'description',
-            'date' : '2020-10-10',
-            'time' : '10:10',
-            'duration' : '40'
+            'display_name': 'display_name',
+            'description': 'description',
+            'date': '2020-10-10',
+            'time': '10:10',
+            'duration': '40'
         }
-        response = self.client.post(reverse('new_scheduled_meeting'), post_data)
+        response = self.client.post(
+            reverse('new_scheduled_meeting'), post_data)
         data = response.json()
         self.assertEqual(data['meeting_id'], create_meeting_response['id'])
 
@@ -224,7 +265,11 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:access_token_response), ]
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:access_token_response), ]
 
         # Patch Updated Meeting
         update_meeting_response = {
@@ -234,19 +279,24 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "duration": 40,
             "timezone": 'America/Santiago',
             "agenda": 'agenda',
-            "id" : 'meeting_id',
+            "id": 'meeting_id',
         }
-        patch.side_effect = [namedtuple("Request", ["status_code", "json"])(204, lambda:update_meeting_response),]
+        patch.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                204, lambda:update_meeting_response), ]
 
         post_data = {
-            'display_name' : 'display_name',
-            'description' : 'description',
-            'date' : '2020-10-10',
-            'time' : '10:10',
-            'duration' : '40',
-            'meeting_id' : 'meeting_id'
+            'display_name': 'display_name',
+            'description': 'description',
+            'date': '2020-10-10',
+            'time': '10:10',
+            'duration': '40',
+            'meeting_id': 'meeting_id'
         }
-        response = self.client.post(reverse('update_scheduled_meeting'), post_data)
+        response = self.client.post(
+            reverse('update_scheduled_meeting'), post_data)
         data = response.json()
         self.assertEqual(data['meeting_id'], update_meeting_response['id'])
 
@@ -264,23 +314,31 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:access_token_response), ]
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:access_token_response), ]
         # GET User Profile
         user_profile_response = {
-            'id' : 'user_id',
-            'first_name' : 'first_name',
-            'last_name' : 'last_name',
-            'email' : 'email@email.email',
-            'type' : 'type',
+            'id': 'user_id',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'email': 'email@email.email',
+            'type': 'type',
         }
-        get.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:user_profile_response), ]
+        get.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:user_profile_response), ]
         response = self.client.get(reverse('is_logged_zoom'))
         self.assertEqual(response.status_code, 200)
 
     @patch("requests.post")
     def test_zoom_api(self, post):
         """
-            Check response status code at zoom_api 
+            Check response status code at zoom_api
         """
         # POST Refresh Token
         response = {
@@ -290,13 +348,18 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "expires_in": 3599,
             "scope": "user:read:admin"
         }
-        post.side_effect = [namedtuple("Request", ["status_code", "json"])(200, lambda:response), ]
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
         get_data = {
-            'code' : 'authorization_code',
-            'redirect' : 'https://eol.uchile.cl/'
+            'code': 'authorization_code',
+            'redirect': 'https://eol.uchile.cl/'
         }
         response = self.client.get(reverse('zoom_api'), get_data)
         self.assertEqual(response.status_code, 302)
+
 
 class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
 
@@ -316,9 +379,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         field_data = DictFieldData(kw)
         xblock = EolZoomXBlock(runtime, field_data, scope_ids)
         xblock.xmodule_runtime = runtime
-        xblock.location = course.id # Example of location
+        xblock.location = course.id  # Example of location
         return xblock
-
 
     def setUp(self):
 
@@ -338,12 +400,20 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             password = 'test'
 
             # Create and enroll student
-            self.student = UserFactory(username=uname, password=password, email=email)
-            CourseEnrollmentFactory(user=self.student, course_id=self.course.id)
+            self.student = UserFactory(
+                username=uname, password=password, email=email)
+            CourseEnrollmentFactory(
+                user=self.student, course_id=self.course.id)
 
             # Create and Enroll staff user
-            self.staff_user = UserFactory(username='staff_user', password='test', email='staff@edx.org', is_staff=True)
-            CourseEnrollmentFactory(user=self.staff_user, course_id=self.course.id)
+            self.staff_user = UserFactory(
+                username='staff_user',
+                password='test',
+                email='staff@edx.org',
+                is_staff=True)
+            CourseEnrollmentFactory(
+                user=self.staff_user,
+                course_id=self.course.id)
             CourseStaffRole(self.course.id).add_users(self.staff_user)
 
             # Log the student in
@@ -352,14 +422,16 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the user staff in
             self.staff_client = Client()
-            assert_true(self.staff_client.login(username='staff_user', password='test'))
-            
+            assert_true(
+                self.staff_client.login(
+                    username='staff_user',
+                    password='test'))
+
             # Create refresh_token
             self.zoom_auth = EolZoomAuth.objects.create(
                 user=self.staff_user,
                 zoom_refresh_token='test_refresh_token'
             )
-
 
     def test_workbench_scenarios(self):
         """
@@ -370,7 +442,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         test_result = self.xblock.workbench_scenarios()
         self.assertEqual(result_title, test_result[0][0])
         self.assertIn(basic_scenario, test_result[0][1])
-    
+
     def test_validate_default_field_data(self):
         """
             Validate that xblock is created successfully
@@ -407,22 +479,25 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.created_by = self.staff_user.id
         self.xblock.created_location = self.xblock.location._to_string()
 
-        # 1. Staff user 
+        # 1. Staff user
         self.xblock.runtime.user_is_staff = True
         student_staff_view = self.xblock.student_view()
         student_staff_view_html = student_staff_view.content
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
-        self.assertIn('class="button button-green"', student_staff_view_html) # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"', student_staff_view_html) # 'Ingresar a la sala' button
+        self.assertIn('class="button button-green"',
+                      student_staff_view_html)  # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"',
+                      student_staff_view_html)  # 'Ingresar a la sala' button
 
         # 2. Student user
         self.xblock.runtime.user_is_staff = False
         student_view = self.xblock.student_view()
         student_view_html = student_view.content
         self.assertNotIn('class="eolzoom_error"', student_view_html)
-        self.assertNotIn('class="button button-green"', student_view_html) # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"', student_view_html) # 'Ingresar a la sala' button
-        
+        self.assertNotIn('class="button button-green"',
+                         student_view_html)  # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"',
+                      student_view_html)  # 'Ingresar a la sala' button
 
     def test_author_view(self):
         """
@@ -452,21 +527,23 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         author_view = self.xblock.student_view()
         author_view_html = author_view.content
         self.assertNotIn('class="eolzoom_error"', author_view_html)
-        self.assertIn('class="button button-green"', author_view_html) # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"', author_view_html) # 'Ingresar a la sala' button
+        self.assertIn('class="button button-green"',
+                      author_view_html)  # 'Iniciar Transmision' button
+        self.assertIn('class="button button-blue"',
+                      author_view_html)  # 'Ingresar a la sala' button
 
     def test_studio_submit(self):
         request = TestRequest()
         request.method = 'POST'
         post_data = {
-            'display_name' : 'new_display_name',
-            'description' : 'new_description',
-            'date' : '2020-10-10',
-            'time' : '10:10',
-            'duration' : 80,
-            'meeting_id' : 'new_meeting_id',
-            'created_by' : self.staff_user.id,
-            'created_location' : self.xblock.location._to_string()
+            'display_name': 'new_display_name',
+            'description': 'new_description',
+            'date': '2020-10-10',
+            'time': '10:10',
+            'duration': 80,
+            'meeting_id': 'new_meeting_id',
+            'created_by': self.staff_user.id,
+            'created_location': self.xblock.location._to_string()
         }
         data = json.dumps(post_data)
         request.body = data
@@ -479,4 +556,6 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.duration, 80)
         self.assertEqual(self.xblock.meeting_id, 'new_meeting_id')
         self.assertEqual(self.xblock.created_by, self.staff_user.id)
-        self.assertEqual(self.xblock.created_location, self.xblock.location._to_string())
+        self.assertEqual(
+            self.xblock.created_location,
+            self.xblock.location._to_string())

@@ -13,6 +13,9 @@ import urllib
 
 from models import EolZoomAuth
 
+import random
+import string
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -125,13 +128,18 @@ def set_scheduled_meeting(request, url, api_method):
         "Content-Type": "application/json"
     }
     if api_method == 'POST':
+        body['password'] = _generate_password()
         r = requests.post(
             url,
             data=json.dumps(body),
             headers=headers)  # CREATE
         if r.status_code == 201:
             data = r.json()
-            meeting_id = data['id']
+            response = {
+                'meeting_id': data['id'],
+                'start_url': data['start_url'],
+                'join_url': data['join_url']
+            }
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':
@@ -141,11 +149,12 @@ def set_scheduled_meeting(request, url, api_method):
             headers=headers)  # UPDATE
         if r.status_code == 204:
             meeting_id = request.POST['meeting_id']
+            response = {
+                'meeting_id': meeting_id
+            }
         else:
             return HttpResponse(status=r.status_code)
-    return JsonResponse({
-        'meeting_id': meeting_id
-    })
+    return JsonResponse(response)
 
 
 def get_access_token(user, refresh_token):
@@ -253,3 +262,9 @@ def get_user_profile(access_token):
     r = requests.get(url, headers=headers)
     data = r.json()
     return data
+
+
+def _generate_password():
+    """Generate a random string of letters and digits """
+    lettersAndDigits = string.ascii_letters + string.digits
+    return ''.join(random.choice(lettersAndDigits) for i in range(10))

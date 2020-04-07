@@ -229,6 +229,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "timezone": 'America/Santiago',
             "agenda": 'agenda',
             "id": 'meeting_id',
+            "start_url": 'start_url_example',
+            "join_url": 'join_url_example'
         }
         post.side_effect = [
             namedtuple(
@@ -273,13 +275,6 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
 
         # Patch Updated Meeting
         update_meeting_response = {
-            "topic": 'topic',
-            "type": 2,
-            "start_time": '2020-10-10T10:10:00',
-            "duration": 40,
-            "timezone": 'America/Santiago',
-            "agenda": 'agenda',
-            "id": 'meeting_id',
         }
         patch.side_effect = [
             namedtuple(
@@ -298,7 +293,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         response = self.client.post(
             reverse('update_scheduled_meeting'), post_data)
         data = response.json()
-        self.assertEqual(data['meeting_id'], update_meeting_response['id'])
+        self.assertEqual(data['meeting_id'], post_data['meeting_id'])
 
     @patch("requests.post")
     @patch("requests.get")
@@ -455,6 +450,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.duration, 40)
         self.assertEqual(self.xblock.created_by, None)
         self.assertEqual(self.xblock.created_location, None)
+        self.assertEqual(self.xblock.start_url, None)
+        self.assertEqual(self.xblock.join_url, None)
 
     def test_student_view_without_configuration(self):
         """
@@ -478,6 +475,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.duration = 120
         self.xblock.created_by = self.staff_user.id
         self.xblock.created_location = self.xblock.location._to_string()
+        self.xblock.start_url = "start_url_example"
+        self.xblock.join_url = "join_url_example"
 
         # 1. Staff user
         self.xblock.runtime.user_is_staff = True
@@ -523,6 +522,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.duration = 120
         self.xblock.created_by = self.staff_user.id
         self.xblock.created_location = self.xblock.location._to_string()
+        self.xblock.start_url = "start_url_example"
+        self.xblock.join_url = "join_url_example"
 
         author_view = self.xblock.student_view()
         author_view_html = author_view.content
@@ -543,7 +544,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             'duration': 80,
             'meeting_id': 'new_meeting_id',
             'created_by': self.staff_user.id,
-            'created_location': self.xblock.location._to_string()
+            'created_location': self.xblock.location._to_string(),
+            'start_url': 'start_url_example',
+            'join_url': 'join_url_example'
         }
         data = json.dumps(post_data)
         request.body = data
@@ -555,6 +558,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.time, '10:10')
         self.assertEqual(self.xblock.duration, 80)
         self.assertEqual(self.xblock.meeting_id, 'new_meeting_id')
+        self.assertEqual(self.xblock.start_url, 'start_url_example')
+        self.assertEqual(self.xblock.join_url, 'join_url_example')
         self.assertEqual(self.xblock.created_by, self.staff_user.id)
         self.assertEqual(
             self.xblock.created_location,

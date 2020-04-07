@@ -37,6 +37,16 @@ class EolZoomXBlock(XBlock):
         scope=Scope.settings,
     )
 
+    start_url = String(
+        display_name=_("URL Start Meeting"),
+        scope=Scope.settings,
+    )
+
+    join_url = String(
+        display_name=_("URL Join Meeting"),
+        scope=Scope.settings,
+    )
+
     icon_class = String(
         default="other",
         scope=Scope.settings,
@@ -102,6 +112,8 @@ class EolZoomXBlock(XBlock):
         settings = {
             'meeting_id': self.meeting_id,
             'created_by': self.created_by,
+            'start_url': self.start_url,
+            'join_url': self.join_url,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
@@ -152,6 +164,8 @@ class EolZoomXBlock(XBlock):
         self.duration = request.params['duration']
         self.created_by = request.params['created_by']
         self.meeting_id = request.params['meeting_id']
+        self.start_url = request.params['start_url']
+        self.join_url = request.params['join_url']
         self.created_location = self.location._to_string()
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')
@@ -163,6 +177,8 @@ class EolZoomXBlock(XBlock):
         return not (
             is_empty(self.check_location(is_lms)) or
             is_empty(self.display_name) or
+            is_empty(self.start_url) or
+            is_empty(self.join_url) or
             is_empty(self.meeting_id) or
             is_empty(self.date) or
             is_empty(self.time) or

@@ -49,8 +49,17 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                 /*
                 * Update XBlock
                 */
-                data = JSON.parse(response)
-                form_data.set('meeting_id', data.meeting_id) // update value
+                data = JSON.parse(response);
+                if(settings.meeting_id) {
+                    // If Update, set the same urls
+                    form_data.set('start_url', settings.start_url);
+                    form_data.set('join_url', settings.join_url);
+                } else {
+                    // If Create, set the urls and id
+                    form_data.set('start_url', data.start_url);
+                    form_data.set('join_url', data.join_url);
+                    form_data.set('meeting_id', data.meeting_id);
+                }
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
                 }

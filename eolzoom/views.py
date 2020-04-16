@@ -135,9 +135,12 @@ def set_scheduled_meeting(request, url, api_method):
             headers=headers)  # CREATE
         if r.status_code == 201:
             data = r.json()
+            # issue: start_url is giving a unique url to start the meeting (anybody with this url start the meeting with the same username)
+            start_url = "{}s/{}".format(settings.EOLZOOM_DOMAIN, data['id'])
             response = {
                 'meeting_id': data['id'],
-                'start_url': data['start_url'],
+                #'start_url': data['start_url'],
+                'start_url' : start_url,
                 'join_url': data['join_url']
             }
         else:

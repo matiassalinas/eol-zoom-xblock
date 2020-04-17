@@ -10,6 +10,7 @@ from django.conf import settings
 import requests
 import json
 import urllib
+import base64
 
 from models import EolZoomAuth
 
@@ -35,7 +36,7 @@ def zoom_api(request):
 
     user = request.user
     authorization_code = request.GET.get('code')
-    redirect = request.GET.get('redirect')  # Studio EOL URL
+    redirect = base64.b64decode(request.GET.get('redirect')).decode('utf-8') # decode Studio EOL URL 
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
 
@@ -46,7 +47,7 @@ def zoom_api(request):
 
     _update_auth(user, token['refresh_token'])
 
-    return HttpResponseRedirect(redirect.replace(' ', '+'))
+    return HttpResponseRedirect(redirect)
 
 
 def is_logged_zoom(request):

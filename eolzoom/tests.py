@@ -7,6 +7,7 @@ from mock import patch, Mock
 from collections import namedtuple
 
 import json
+import base64
 
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -350,7 +351,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 200, lambda:response), ]
         get_data = {
             'code': 'authorization_code',
-            'redirect': 'https://eol.uchile.cl/'
+            'redirect': base64.b64encode('https://eol.uchile.cl/')
         }
         response = self.client.get(reverse('zoom_api'), get_data)
         self.assertEqual(response.status_code, 302)

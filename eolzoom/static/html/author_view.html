@@ -23,8 +23,11 @@
         <p class="eolzoom_detail"><span class="fa fa-calendar" aria-hidden="true"></span>Fecha: {{ xblock.date }} - {{ xblock.time }}</p>
         <p class="eolzoom_detail"><span class="fa fa-info-circle" aria-hidden="true"></span>Descripción: {{ xblock.description | safe}}</p>
         <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-clock-o" aria-hidden="true"></span>Duración estimada: {{ xblock.duration }} minutos</p>
-        <a href="{{xblock.start_url}}" target="__blank" class="button button-green">INICIAR TRANSMISIÓN</a>
+        <a href="{{xblock.start_url}}" target="__blank" class="button button-green start_meeting-btn">INICIAR TRANSMISIÓN</a>
         <a href="{{xblock.join_url}}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
+        {% if '?pwd=' not in  xblock.join_url and xblock.meeting_password != 'undefined' and xblock.meeting_password != None %}
+            <p class="eolzoom_password">La contraseña de la videollamada es: <strong>{{ xblock.meeting_password }}</strong></p>
+        {% endif %}
     {% else %}
         <p class="eolzoom_error">La sesión de Zoom no ha sido configurada correctamente. </p>
         <p class="eolzoom_error contact">Contáctate con alguien del equipo docente para solucionar el problema.</p>

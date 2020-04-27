@@ -231,7 +231,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "agenda": 'agenda',
             "id": 'meeting_id',
             "start_url": 'start_url_example',
-            "join_url": 'join_url_example'
+            "join_url": 'join_url_example',
+            "password" : 'password'
         }
         post.side_effect = [
             namedtuple(
@@ -247,7 +248,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'description': 'description',
             'date': '2020-10-10',
             'time': '10:10',
-            'duration': '40'
+            'duration': '40',
+            'restricted_access' : 'false'
         }
         response = self.client.post(
             reverse('new_scheduled_meeting'), post_data)
@@ -289,7 +291,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'date': '2020-10-10',
             'time': '10:10',
             'duration': '40',
-            'meeting_id': 'meeting_id'
+            'meeting_id': 'meeting_id',
+            'restricted_access' : 'false'
         }
         response = self.client.post(
             reverse('update_scheduled_meeting'), post_data)
@@ -484,7 +487,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         student_staff_view = self.xblock.student_view()
         student_staff_view_html = student_staff_view.content
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
-        self.assertIn('class="button button-green"',
+        self.assertIn('class="button button-green start_meeting-btn"',
                       student_staff_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue"',
                       student_staff_view_html)  # 'Ingresar a la sala' button
@@ -494,7 +497,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         student_view = self.xblock.student_view()
         student_view_html = student_view.content
         self.assertNotIn('class="eolzoom_error"', student_view_html)
-        self.assertNotIn('class="button button-green"',
+        self.assertNotIn('class="button button-green start_meeting-btn"',
                          student_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue"',
                       student_view_html)  # 'Ingresar a la sala' button
@@ -529,7 +532,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         author_view = self.xblock.student_view()
         author_view_html = author_view.content
         self.assertNotIn('class="eolzoom_error"', author_view_html)
-        self.assertIn('class="button button-green"',
+        self.assertIn('class="button button-green start_meeting-btn"',
                       author_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue"',
                       author_view_html)  # 'Ingresar a la sala' button
@@ -547,7 +550,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             'created_by': self.staff_user.id,
             'created_location': self.xblock.location._to_string(),
             'start_url': 'start_url_example',
-            'join_url': 'join_url_example'
+            'join_url': 'join_url_example',
+            'restricted_access' : False,
+            'meeting_password': 'meeting_password',
         }
         data = json.dumps(post_data)
         request.body = data
@@ -561,6 +566,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.meeting_id, 'new_meeting_id')
         self.assertEqual(self.xblock.start_url, 'start_url_example')
         self.assertEqual(self.xblock.join_url, 'join_url_example')
+        self.assertEqual(self.xblock.meeting_password, 'meeting_password')
+        self.assertEqual(self.xblock.restricted_access, False)
         self.assertEqual(self.xblock.created_by, self.staff_user.id)
         self.assertEqual(
             self.xblock.created_location,

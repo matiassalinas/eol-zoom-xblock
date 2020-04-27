@@ -1,5 +1,4 @@
-function EolZoomXBlock(runtime, element, settings) {
-
+function EolZoomAuthorXBlock(runtime, element, settings) {
     $(function($) {
         /* If restricted access is true, start meeting through the api */
         if (settings.restricted_access) {
@@ -18,4 +17,5 @@ function EolZoomXBlock(runtime, element, settings) {
         }
 
     });
-}
+  
+  }

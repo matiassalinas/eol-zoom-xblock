@@ -12,11 +12,11 @@ logger = logging.getLogger(__name__)
 
 import requests
 import json
+from six import text_type
 
 from xblock.core import XBlock
-from xblock.fields import Integer, Scope, String, DateTime
+from xblock.fields import Integer, Scope, String, DateTime, Boolean
 from xblock.fragment import Fragment
-from xblockutils.studio_editable import StudioEditableXBlockMixin
 
 
 # Make '_' a no-op so we can scrape strings
@@ -59,7 +59,7 @@ class EolZoomXBlock(XBlock):
     )
 
     time = String(display_name=_("Hora"), scope=Scope.settings, help=_(
-        "Indica la hora de la videollamada (en formato HH:MM. Ejemplo: 14:30)"))
+        "Indica la hora de la videollamada"))
 
     description = String(
         display_name=_("Descripcion"),
@@ -84,6 +84,18 @@ class EolZoomXBlock(XBlock):
         scope=Scope.settings,
     )
 
+    restricted_access = Boolean(
+        display_name=_("Acceso restringido"),
+        default=False,
+        scope=Scope.settings,
+        help=_("Solo estudiantes inscritos en el curso podran acceder a esta videollamada")
+    )
+
+    meeting_password = String(
+        display_name=_("Meeting Password"),
+        scope=Scope.settings,
+    )
+
     has_author_view = True
 
     def resource_string(self, path):
@@ -98,7 +110,16 @@ class EolZoomXBlock(XBlock):
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/eolzoom.css"))
         frag.add_javascript(self.resource_string("static/js/src/eolzoom.js"))
-        frag.initialize_js('EolZoomXBlock')
+        settings = {
+            'meeting_id': self.meeting_id,
+            'course_id' : text_type(self.xmodule_runtime.course_id),
+            'url_start_meeting': reverse('start_meeting'),
+            'restricted_access' : self.restricted_access,
+            'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
+                DJANGO_SETTINGS.EOLZOOM_DOMAIN,
+                DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
+        }
+        frag.initialize_js('EolZoomXBlock', json_args=settings)
         return frag
 
     def studio_view(self, context=None):
@@ -114,6 +135,7 @@ class EolZoomXBlock(XBlock):
             'created_by': self.created_by,
             'start_url': self.start_url,
             'join_url': self.join_url,
+            'restricted_access': self.restricted_access,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
@@ -131,6 +153,18 @@ class EolZoomXBlock(XBlock):
             'static/html/author_view.html', context_html)
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/eolzoom.css"))
+        frag.add_javascript(self.resource_string("static/js/src/author.js"))
+
+        settings = {
+            'meeting_id': self.meeting_id,
+            'course_id' : text_type(self.xmodule_runtime.course_id),
+            'url_start_meeting': reverse('start_meeting'),
+            'restricted_access': self.restricted_access,
+            'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
+                DJANGO_SETTINGS.EOLZOOM_DOMAIN,
+                DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
+        }
+        frag.initialize_js('EolZoomAuthorXBlock', json_args=settings)
         return frag
 
     def get_context(self, is_lms=False):
@@ -166,6 +200,8 @@ class EolZoomXBlock(XBlock):
         self.meeting_id = request.params['meeting_id']
         self.start_url = request.params['start_url']
         self.join_url = request.params['join_url']
+        self.restricted_access = request.params['restricted_access']
+        self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')

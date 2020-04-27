@@ -13,6 +13,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var time = $(element).find('input[name=time]').val();
         var duration = $(element).find('input[name=duration]').val();
         var created_by = $(element).find('#created_by').text();
+        var restricted_access = $(element).find('#restricted_access').val();
+        restricted_access = restricted_access == '1';
         if(display_name == "" || description == "" || date == "" || time == "" || duration < 0 || duration == "") {
             alert("Datos inválidos. Revisa nuevamente la información ingresada");
             e.preventDefault();
@@ -25,6 +27,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('duration', duration);
         form_data.append('created_by', created_by);
         form_data.append('meeting_id', settings.meeting_id);
+        form_data.append('restricted_access', restricted_access);
 
         /*
         * Set update meeting url if already have a meeting_id
@@ -54,11 +57,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     // If Update, set the same urls
                     form_data.set('start_url', settings.start_url);
                     form_data.set('join_url', settings.join_url);
+                    form_data.set('meeting_password', settings.meeting_password);
                 } else {
                     // If Create, set the urls and id
                     form_data.set('start_url', data.start_url);
                     form_data.set('join_url', data.join_url);
                     form_data.set('meeting_id', data.meeting_id);
+                    form_data.set('meeting_password', data.meeting_password);
                 }
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
@@ -103,6 +108,10 @@ function EolZoomStudioXBlock(runtime, element, settings) {
 
         check_is_logged();
         get_login_url();
+
+        if (settings.restricted_access) {
+            $('#restricted_access').prop('disabled', true);
+        }
         function check_is_logged() {
             /*
             * Check if user is logged at Eol Zoom API

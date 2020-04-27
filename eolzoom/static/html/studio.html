@@ -40,14 +40,14 @@
         <label class="label setting-label" for="date">Fecha</label>
         <input class="input setting-input" name="date" id="date" value='{{xblock.date|default_if_none:""}}' minlength="3" type="date" />
       </div>
-      <span class="tip setting-help">Indica la fecha programada de la videollamada (en formato dd-mm-yyyy. Ejemplo: 19-02-2015)</span>
+      <span class="tip setting-help">Indica la fecha programada de la videollamada</span>
     </li>
     <li class="field comp-setting-entry is-set">
       <div class="wrapper-comp-setting">
         <label class="label setting-label" for="time">Hora</label>
         <input class="input setting-input" name="time" id="time" value="{{xblock.time}}" minlength="5" maxlength="5"  type="time" />
       </div>
-      <span class="tip setting-help">Indica la hora de la videollamada (en formato HH:MM. Ejemplo: 14:30)</span>
+      <span class="tip setting-help">Indica la hora de la videollamada</span>
     </li>
     <li class="field comp-setting-entry is-set">
       <div class="wrapper-comp-setting">
@@ -55,6 +55,20 @@
         <input class="input setting-input" name="duration" id="duration" value="{{xblock.duration}}" min="0" type="number" />
       </div>
       <span class="tip setting-help">Duración de la videollamada (en minutos)</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="restricted_access">Acceso Restringido</label>
+        <select class="input setting-input" id="restricted_access">
+          <option value="0" {% if not xblock.restricted_access %}selected{% endif %}>
+            Deshabilitado
+          </option>
+          <option value="1" {% if xblock.restricted_access %}selected{% endif %}>
+            Habilitado
+          </option>
+        </select>
+      </div>
+      <span class="tip setting-help">Solo estudiantes inscritos en el curso podran acceder a esta videollamada (al crear una videollamada con esta opción habilitada, no se podrá deshabilitar en un futuro)</span>
     </li>
   </ul>
   <div class="xblock-actions">

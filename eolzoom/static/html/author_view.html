@@ -25,7 +25,7 @@
         <p class="eolzoom_detail" style="margin-bottom: 20px;"><span class="fa fa-clock-o" aria-hidden="true"></span>Duración estimada: {{ xblock.duration }} minutos</p>
         <a href="{{xblock.start_url}}" target="__blank" class="button button-green start_meeting-btn">INICIAR TRANSMISIÓN</a>
         <a href="{{xblock.join_url}}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
-        {% if '?pwd=' not in  xblock.join_url and xblock.meeting_password != 'undefined' and xblock.meeting_password != None %}
+        {% if not xblock.restricted_access and '?pwd=' not in  xblock.join_url and xblock.meeting_password != 'undefined' and xblock.meeting_password != None %}
             <p class="eolzoom_password">La contraseña de la videollamada es: <strong>{{ xblock.meeting_password }}</strong></p>
         {% endif %}
     {% else %}

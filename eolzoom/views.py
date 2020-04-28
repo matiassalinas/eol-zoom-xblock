@@ -155,7 +155,7 @@ def set_scheduled_meeting(request, url, api_method):
                 #'start_url': data['start_url'],
                 'start_url' : start_url,
                 'join_url': data['join_url'],
-                'meeting_password': data['password']
+                'meeting_password': body['password']
             }
         else:
             return HttpResponse(status=r.status_code)

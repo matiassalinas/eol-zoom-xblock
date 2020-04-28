@@ -12,7 +12,7 @@ import json
 import urllib
 import base64
 
-from models import EolZoomAuth
+from models import EolZoomAuth, EolZoomRegistrant
 from opaque_keys.edx.keys import CourseKey
 
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
@@ -126,13 +126,15 @@ def set_scheduled_meeting(request, url, api_method):
         "duration": duration,
         "timezone": timezone,
         "agenda": agenda,
-        "settings" : {}
+        "settings" : {
+            'use_pmi' : False, # Use Personal Meeting ID: False
+        }
     }
     # Restricted access:
     # 1. True: Register users
     # 2. False: Meeting with password
     if request.POST['restricted_access'] == 'true': # string boolean from javascript
-        body['settings']['approval_type'] = 1
+        body['settings']['approval_type'] = 1 # Manually Approve (registrants)
         body['settings']['registrants_email_notification'] = False
         body['password'] = ''
     headers = {
@@ -309,12 +311,59 @@ def start_meeting(request):
         return HttpResponse(status=400)
     _update_auth(user, token['refresh_token'])
     # register enrolled students 
-    if meeting_registrant(request.user, args['meeting_id'], args['course_id'], token['refresh_token']):
-        return HttpResponseRedirect(create_start_url(args['meeting_id']))
-    else: 
+    if not meeting_registrant(request.user, args['meeting_id'], args['course_id']):
         return HttpResponse(status=400)
+        
+    registrants = get_join_url(request.user, args['meeting_id'], args['course_id'])
+    if 'error' in registrants:
+        return HttpResponse(status=400)
+    _submit_join_url(registrants['registrants'], args['meeting_id'])
+    return HttpResponseRedirect(create_start_url(args['meeting_id']))
+        
 
-def meeting_registrant(user_meeting, meeting_id, course_id, refresh_token):
+def _submit_join_url(registrants, meeting_id):
+    """
+        Create EolZoomRegistrant with student join_url
+    """
+    for student in registrants:
+        # get_or_create for duplicates
+        eol_zoom_registrants, created = EolZoomRegistrant.objects.get_or_create(
+            meeting_id=meeting_id,
+            email=student['email'],
+            join_url=student['join_url']
+        )
+
+def get_join_url(user_meeting, meeting_id, course_id):
+    """
+        Get registrants with join url
+    """
+    refresh_token = _get_refresh_token(user_meeting)
+    token = get_access_token(user_meeting, refresh_token)
+    if 'error' in token:
+        logger.error("Error get_access_token {}".format(token['error']))
+        return {
+            'error': 'Error get_access_token'
+        }
+    access_token = token['access_token']
+    headers = {
+        "Authorization": "Bearer {}".format(access_token)
+    }
+    body = {
+        'status' : 'approved',
+    }
+    url = "https://api.zoom.us/v2/meetings/{}/registrants".format(meeting_id)
+    r = requests.get(
+        url,
+        data=json.dumps(body),
+        headers=headers)
+    if r.status_code != 200:
+        logger.error('Get Join URL fail {}'.format(r.text))
+        return {
+            'error': 'Get Join URL fail'
+        }
+    return r.json()
+
+def meeting_registrant(user_meeting, meeting_id, course_id):
     """
         Get all enrolled students, create meeting registrant and approve
     """

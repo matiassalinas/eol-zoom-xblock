@@ -489,7 +489,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
         self.assertIn('class="button button-green start_meeting-btn"',
                       student_staff_view_html)  # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"',
+        self.assertIn('class="button button-blue join_meeting-btn"',
                       student_staff_view_html)  # 'Ingresar a la sala' button
 
         # 2. Student user
@@ -499,7 +499,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertNotIn('class="eolzoom_error"', student_view_html)
         self.assertNotIn('class="button button-green start_meeting-btn"',
                          student_view_html)  # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"',
+        self.assertIn('class="button button-blue join_meeting-btn"',
                       student_view_html)  # 'Ingresar a la sala' button
 
     def test_author_view(self):
@@ -534,7 +534,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertNotIn('class="eolzoom_error"', author_view_html)
         self.assertIn('class="button button-green start_meeting-btn"',
                       author_view_html)  # 'Iniciar Transmision' button
-        self.assertIn('class="button button-blue"',
+        self.assertIn('class="button button-blue join_meeting-btn"',
                       author_view_html)  # 'Ingresar a la sala' button
 
     def test_studio_submit(self):

@@ -114,6 +114,7 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id' : text_type(self.xmodule_runtime.course_id),
             'url_start_meeting': reverse('start_meeting'),
+            'get_student_join_url' : reverse('get_student_join_url'),
             'restricted_access' : self.restricted_access,
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,
@@ -159,6 +160,7 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id' : text_type(self.xmodule_runtime.course_id),
             'url_start_meeting': reverse('start_meeting'),
+            'get_student_join_url' : reverse('get_student_join_url'),
             'restricted_access': self.restricted_access,
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,

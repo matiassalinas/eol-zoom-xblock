@@ -363,6 +363,28 @@ def get_join_url(user_meeting, meeting_id, course_id):
         }
     return r.json()
 
+def get_student_join_url(request):
+    # check method and params
+    if request.method != "GET":
+        return HttpResponse(status=400)
+    if 'meeting_id' not in request.GET:
+        return HttpResponse(status=400)
+
+    user = request.user
+    meeting_id = request.GET.get('meeting_id')
+    try:
+        registrant = EolZoomRegistrant.objects.get(email=user.email, meeting_id=meeting_id)
+        return JsonResponse({'status': True, 'join_url':registrant.join_url})
+    except EolZoomRegistrant.DoesNotExist:
+        # IF USER IS NOT REGISTERED, CHECK IF THE MEETING HAS STARTED
+        registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
+        if registrants.count() > 0:
+            return JsonResponse({'status': False, 'error_type': 'NOT_FOUND'})
+        else:
+            return JsonResponse({'status': False, 'error_type': 'NOT_STARTED'})
+
+
+
 def meeting_registrant(user_meeting, meeting_id, course_id):
     """
         Get all enrolled students, create meeting registrant and approve

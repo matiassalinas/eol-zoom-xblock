@@ -85,6 +85,49 @@
     color: #6d6c6c;
 }
 
+.eolzoom_alert {
+    max-width: 450px;
+    margin: 10px auto;
+}
+
+.eolzoom_alert .alert {
+    position: relative;
+    font-style: italic;
+    padding: .75rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: .25rem;
+    margin-bottom: 1em;
+    min-width: auto;
+  }
+  
+.eolzoom_alert .alert-warning {
+    color: #856404 !important;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.eolzoom_alert a {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.eolzoom_alert p {
+    margin-bottom: 0px !important;
+    text-align: center;
+}
+
+.eolzoom_alert .alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724 !important;
+}
+
+.eolzoom_alert .alert-info {
+    background-color: #cce5ff;
+    border-color: #b8daff;
+    color: #004085 !important;
+}
+
 
 /*
  Author view

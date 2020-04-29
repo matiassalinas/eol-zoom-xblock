@@ -1,3 +1,5 @@
+<div class="eolzoom_alert">
+</div>
 <div class="eolzoom_block">
     <img class="zoom-logo" src="{{ zoom_logo_path }}" alt="Zoom-Logo" />
     {% if status %}
@@ -8,7 +10,7 @@
         {% if is_course_staff %}
             <a href="{{xblock.start_url}}" target="__blank" class="button button-green start_meeting-btn">INICIAR TRANSMISIÓN</a>
         {% endif %}
-        <a href="{{xblock.join_url}}" target="__blank" class="button button-blue">INGRESAR A LA SALA</a>
+        <a href="{{xblock.join_url}}" target="__blank" class="button button-blue join_meeting-btn">INGRESAR A LA SALA</a>
         {% if not xblock.restricted_access and '?pwd=' not in  xblock.join_url and xblock.meeting_password != 'undefined' and xblock.meeting_password != None %}
             <p class="eolzoom_password">La contraseña de la videollamada es: <strong>{{ xblock.meeting_password }}</strong></p>
         {% endif %}

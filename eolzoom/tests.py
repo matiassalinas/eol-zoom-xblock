@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 XBLOCK_RUNTIME_USER_ID = 99
 
+
 class TestRequest(object):
     # pylint: disable=too-few-public-methods
     """
@@ -233,7 +234,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "id": 'meeting_id',
             "start_url": 'start_url_example',
             "join_url": 'join_url_example',
-            "password" : 'password'
+            "password": 'password'
         }
         post.side_effect = [
             namedtuple(
@@ -250,7 +251,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'date': '2020-10-10',
             'time': '10:10',
             'duration': '40',
-            'restricted_access' : 'false'
+            'restricted_access': 'false'
         }
         response = self.client.post(
             reverse('new_scheduled_meeting'), post_data)
@@ -293,7 +294,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'time': '10:10',
             'duration': '40',
             'meeting_id': 'meeting_id',
-            'restricted_access' : 'false'
+            'restricted_access': 'false'
         }
         response = self.client.post(
             reverse('update_scheduled_meeting'), post_data)
@@ -494,8 +495,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
         self.assertIn('class="button button-green start_meeting-btn"',
                       student_staff_view_html)  # 'Iniciar Transmision' button
-        self.assertNotIn('class="button button-blue join_meeting-btn"',
-                      student_staff_view_html)  # 'Ingresar a la sala' button
+        self.assertNotIn(
+            'class="button button-blue join_meeting-btn"',
+            student_staff_view_html)  # 'Ingresar a la sala' button
 
         # 2. Staff user not host
         self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID - 1
@@ -503,8 +505,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         student_staff_view = self.xblock.student_view()
         student_staff_view_html = student_staff_view.content
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
-        self.assertNotIn('class="button button-green start_meeting-btn"',
-                      student_staff_view_html)  # 'Iniciar Transmision' button
+        self.assertNotIn(
+            'class="button button-green start_meeting-btn"',
+            student_staff_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue join_meeting-btn"',
                       student_staff_view_html)  # 'Ingresar a la sala' button
 
@@ -519,7 +522,6 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertIn('class="button button-blue join_meeting-btn"',
                       student_view_html)  # 'Ingresar a la sala' button
 
-    
     def test_author_view(self):
         """
             Test author view:
@@ -548,7 +550,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.created_location = self.xblock.location._to_string()
         self.xblock.start_url = "start_url_example"
         self.xblock.join_url = "join_url_example"
-        
+
         # 3.a Author is host
         self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID
         author_view = self.xblock.author_view()
@@ -557,16 +559,15 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertIn('class="button button-green start_meeting-btn"',
                       author_view_html)  # 'Iniciar Transmision' button
         self.assertNotIn('class="button button-blue join_meeting-btn"',
-                      author_view_html)  # 'Ingresar a la sala' button
+                         author_view_html)  # 'Ingresar a la sala' button
 
-        
         # 3.b Author is not host
         self.xblock.edx_created_by = 'another'
         author_view = self.xblock.author_view()
         author_view_html = author_view.content
         self.assertNotIn('class="eolzoom_error"', author_view_html)
         self.assertNotIn('class="button button-green start_meeting-btn"',
-                      author_view_html)  # 'Iniciar Transmision' button
+                         author_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue join_meeting-btn"',
                       author_view_html)  # 'Ingresar a la sala' button
 
@@ -584,7 +585,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             'created_location': self.xblock.location._to_string(),
             'start_url': 'start_url_example',
             'join_url': 'join_url_example',
-            'restricted_access' : False,
+            'restricted_access': False,
             'meeting_password': 'meeting_password',
         }
         data = json.dumps(post_data)

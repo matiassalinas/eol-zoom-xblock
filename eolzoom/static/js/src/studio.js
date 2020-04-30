@@ -131,6 +131,11 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     if(!settings.meeting_id || (settings.created_by == user_profile.email && settings.user_id == settings.edx_created_by) ) {
                         $('.eolzoom_studio li').show();
                         $('.save-button').show();
+                        // Disable restricted_access select if user doesn't have PRO PLAN
+                        if(user_profile.type == 1 && !settings.restricted_access) {
+                            $('#restricted_access').prop('disabled', true);
+                            $('#restricted_access_warning').html("No cuentas con licencia PRO ('Licensed') por lo que se ha deshabilitado esta configuración. <a href='" + get_login_url() +  "' >Presiona aquí para obtener una licencia PRO</a> (si tienes problemas, contacta a la mesa de ayuda de la plataforma).");
+                        }
                     } else {
                         $('.logging-container').html("No tienes permisos para modificar esta transmisión.");
                     }

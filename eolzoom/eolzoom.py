@@ -119,10 +119,11 @@ class EolZoomXBlock(XBlock):
         frag.add_javascript(self.resource_string("static/js/src/eolzoom.js"))
         settings = {
             'meeting_id': self.meeting_id,
-            'course_id' : text_type(self.xmodule_runtime.course_id),
+            'course_id': text_type(
+                self.xmodule_runtime.course_id),
             'url_start_meeting': reverse('start_meeting'),
-            'get_student_join_url' : reverse('get_student_join_url'),
-            'restricted_access' : self.restricted_access,
+            'get_student_join_url': reverse('get_student_join_url'),
+            'restricted_access': self.restricted_access,
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,
                 DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
@@ -142,8 +143,8 @@ class EolZoomXBlock(XBlock):
         settings = {
             'meeting_id': self.meeting_id,
             'created_by': self.created_by,
-            'edx_created_by' : self.edx_created_by,
-            'user_id' : self._edited_by,
+            'edx_created_by': self.edx_created_by,
+            'user_id': self._edited_by,
             'start_url': self.start_url,
             'join_url': self.join_url,
             'restricted_access': self.restricted_access,
@@ -168,9 +169,10 @@ class EolZoomXBlock(XBlock):
 
         settings = {
             'meeting_id': self.meeting_id,
-            'course_id' : text_type(self.xmodule_runtime.course_id),
+            'course_id': text_type(
+                self.xmodule_runtime.course_id),
             'url_start_meeting': reverse('start_meeting'),
-            'get_student_join_url' : reverse('get_student_join_url'),
+            'get_student_join_url': reverse('get_student_join_url'),
             'restricted_access': self.restricted_access,
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,

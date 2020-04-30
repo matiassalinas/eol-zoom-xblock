@@ -39,7 +39,8 @@ def zoom_api(request):
 
     user = request.user
     authorization_code = request.GET.get('code')
-    redirect = base64.b64decode(request.GET.get('redirect')).decode('utf-8') # decode Studio EOL URL 
+    redirect = base64.b64decode(request.GET.get('redirect')).decode(
+        'utf-8')  # decode Studio EOL URL
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
 
@@ -126,15 +127,15 @@ def set_scheduled_meeting(request, url, api_method):
         "duration": duration,
         "timezone": timezone,
         "agenda": agenda,
-        "settings" : {
-            'use_pmi' : False, # Use Personal Meeting ID: False
+        "settings": {
+            'use_pmi': False,  # Use Personal Meeting ID: False
         }
     }
     # Restricted access:
     # 1. True: Register users
     # 2. False: Meeting with password
-    if request.POST['restricted_access'] == 'true': # string boolean from javascript
-        body['settings']['approval_type'] = 1 # Manually Approve (registrants)
+    if request.POST['restricted_access'] == 'true':  # string boolean from javascript
+        body['settings']['approval_type'] = 1  # Manually Approve (registrants)
         body['settings']['registrants_email_notification'] = False
         body['password'] = ''
     headers = {
@@ -150,12 +151,13 @@ def set_scheduled_meeting(request, url, api_method):
             headers=headers)  # CREATE
         if r.status_code == 201:
             data = r.json()
-            # issue: start_url is giving a unique url to start the meeting (anybody with this url start the meeting with the same username)
+            # issue: start_url is giving a unique url to start the meeting
+            # (anybody with this url start the meeting with the same username)
             start_url = create_start_url(data['id'])
             response = {
                 'meeting_id': data['id'],
                 #'start_url': data['start_url'],
-                'start_url' : start_url,
+                'start_url': start_url,
                 'join_url': data['join_url'],
                 'meeting_password': body['password']
             }
@@ -301,7 +303,8 @@ def start_meeting(request):
 
     user = request.user
     authorization_code = request.GET.get('code')
-    data = base64.b64decode(request.GET.get('data')) # data with meeting_id and course_id
+    # data with meeting_id and course_id
+    data = base64.b64decode(request.GET.get('data'))
     args = json.loads(data)
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
@@ -310,16 +313,22 @@ def start_meeting(request):
         logger.error("Error get_refresh_token {}".format(token['error']))
         return HttpResponse(status=400)
     _update_auth(user, token['refresh_token'])
-    # register enrolled students 
-    if not meeting_registrant(request.user, args['meeting_id'], args['course_id']):
+    # register enrolled students
+    if not meeting_registrant(
+            request.user,
+            args['meeting_id'],
+            args['course_id']):
         return HttpResponse(status=400)
-        
-    registrants = get_join_url(request.user, args['meeting_id'], args['course_id'])
+
+    registrants = get_join_url(
+        request.user,
+        args['meeting_id'],
+        args['course_id'])
     if 'error' in registrants:
         return HttpResponse(status=400)
     _submit_join_url(registrants['registrants'], args['meeting_id'])
     return HttpResponseRedirect(create_start_url(args['meeting_id']))
-        
+
 
 def _submit_join_url(registrants, meeting_id):
     """
@@ -332,6 +341,7 @@ def _submit_join_url(registrants, meeting_id):
             email=student['email'],
             join_url=student['join_url']
         )
+
 
 def get_join_url(user_meeting, meeting_id, course_id):
     """
@@ -349,7 +359,7 @@ def get_join_url(user_meeting, meeting_id, course_id):
         "Authorization": "Bearer {}".format(access_token)
     }
     body = {
-        'status' : 'approved',
+        'status': 'approved',
     }
     url = "https://api.zoom.us/v2/meetings/{}/registrants".format(meeting_id)
     r = requests.get(
@@ -363,6 +373,7 @@ def get_join_url(user_meeting, meeting_id, course_id):
         }
     return r.json()
 
+
 def get_student_join_url(request):
     # check method and params
     if request.method != "GET":
@@ -373,8 +384,9 @@ def get_student_join_url(request):
     user = request.user
     meeting_id = request.GET.get('meeting_id')
     try:
-        registrant = EolZoomRegistrant.objects.get(email=user.email, meeting_id=meeting_id)
-        return JsonResponse({'status': True, 'join_url':registrant.join_url})
+        registrant = EolZoomRegistrant.objects.get(
+            email=user.email, meeting_id=meeting_id)
+        return JsonResponse({'status': True, 'join_url': registrant.join_url})
     except EolZoomRegistrant.DoesNotExist:
         # IF USER IS NOT REGISTERED, CHECK IF THE MEETING HAS STARTED
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
@@ -384,31 +396,32 @@ def get_student_join_url(request):
             return JsonResponse({'status': False, 'error_type': 'NOT_STARTED'})
 
 
-
 def meeting_registrant(user_meeting, meeting_id, course_id):
     """
         Get all enrolled students, create meeting registrant and approve
     """
     students = get_students(user_meeting, course_id)
-    students_registrant = [] # List of students registrant
+    students_registrant = []  # List of students registrant
     platform_name = configuration_helpers.get_value(
         'PLATFORM_NAME', settings.PLATFORM_NAME).encode('utf-8').upper()
     for student in students:
         # Student name at Zoom == 'profile_name'+' platform_name'
         student_info = {
-            'email' : student.email,
-            'first_name' : student.profile.name,
-            'last_name' : platform_name
+            'email': student.email,
+            'first_name': student.profile.name,
+            'last_name': platform_name
         }
         data = get_meeting_registrant(meeting_id, user_meeting, student_info)
         if 'registrant_id' in data and 'error' not in data:
             students_registrant.append({
-                'id' : data['registrant_id'],
-                'email' : student_info['email']
+                'id': data['registrant_id'],
+                'email': student_info['email']
             })
     # Approve all registrant student status
-    status = set_registrant_status(meeting_id, user_meeting, students_registrant)
+    status = set_registrant_status(
+        meeting_id, user_meeting, students_registrant)
     return True if 'error' not in status else False
+
 
 def get_students(user, course_id):
     """
@@ -420,6 +433,7 @@ def get_students(user, course_id):
         courseenrollment__is_active=1
     ).exclude(id=user.id)
     return students
+
 
 def get_meeting_registrant(meeting_id, user, student):
     """
@@ -449,6 +463,7 @@ def get_meeting_registrant(meeting_id, user, student):
         }
     return r.json()
 
+
 def set_registrant_status(meeting_id, user, registrants):
     """
         Set registrant status to 'approve' for a list of student (registrants)
@@ -466,10 +481,11 @@ def set_registrant_status(meeting_id, user, registrants):
         "Content-Type": "application/json"
     }
     body = {
-        'action' : 'approve',
-        'registrants' : registrants
+        'action': 'approve',
+        'registrants': registrants
     }
-    url = "https://api.zoom.us/v2/meetings/{}/registrants/status".format(meeting_id)
+    url = "https://api.zoom.us/v2/meetings/{}/registrants/status".format(
+        meeting_id)
     r = requests.put(
         url,
         data=json.dumps(body),
@@ -480,6 +496,7 @@ def set_registrant_status(meeting_id, user, registrants):
             'error': 'Set registrant status fail'
         }
     return {'success': 'approved'}
+
 
 def create_start_url(meeting_id):
     """ Create start_url with Zoom Domain and meeting ID """

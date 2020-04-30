@@ -16,6 +16,7 @@ class EolZoomAuth(models.Model):
         related_name="eolzoom_user")
     zoom_refresh_token = models.TextField()
 
+
 class EolZoomRegistrant(models.Model):
     """
         Model with students join url
@@ -33,5 +34,3 @@ class EolZoomRegistrant(models.Model):
 
     def __str__(self):
         return '(%s) %s -> %s' % (self.meeting_id, self.email, self.join_url)
-
-

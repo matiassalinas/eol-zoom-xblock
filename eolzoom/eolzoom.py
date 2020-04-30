@@ -74,8 +74,15 @@ class EolZoomXBlock(XBlock):
         help=_("Duracion de la videollamada")
     )
 
+    # Zoom e-mail
     created_by = String(
         display_name=_("Created By"),
+        scope=Scope.settings,
+    )
+
+    # EDX User ID
+    edx_created_by = Integer(
+        display_name=_("Host Username"),
         scope=Scope.settings,
     )
 
@@ -125,6 +132,7 @@ class EolZoomXBlock(XBlock):
 
     def studio_view(self, context=None):
         context_html = self.get_context()
+        context_html['user_id'] = self._edited_by
         template = self.render_template(
             'static/html/studio.html', context_html)
         frag = Fragment(template)
@@ -134,6 +142,8 @@ class EolZoomXBlock(XBlock):
         settings = {
             'meeting_id': self.meeting_id,
             'created_by': self.created_by,
+            'edx_created_by' : self.edx_created_by,
+            'user_id' : self._edited_by,
             'start_url': self.start_url,
             'join_url': self.join_url,
             'restricted_access': self.restricted_access,
@@ -175,6 +185,7 @@ class EolZoomXBlock(XBlock):
         status = self.get_status(is_lms)
         return {
             'xblock': self,
+            'user_id': self.runtime.user_id,
             'EOLZOOM_DOMAIN': DJANGO_SETTINGS.EOLZOOM_DOMAIN,
             'zoom_logo_path': self.runtime.local_resource_url(
                 self,
@@ -205,6 +216,7 @@ class EolZoomXBlock(XBlock):
         self.restricted_access = request.params['restricted_access']
         self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
+        self.edx_created_by = self._edited_by
         return Response(json.dumps({'result': 'success'}),
                         content_type='application/json')
 

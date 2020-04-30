@@ -29,6 +29,7 @@ from models import EolZoomAuth
 import logging
 logger = logging.getLogger(__name__)
 
+XBLOCK_RUNTIME_USER_ID = 99
 
 class TestRequest(object):
     # pylint: disable=too-few-public-methods
@@ -373,12 +374,14 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             service=Mock(
                 return_value=Mock(_catalog={}),
             ),
+            user_id=XBLOCK_RUNTIME_USER_ID,
         )
         scope_ids = Mock()
         field_data = DictFieldData(kw)
         xblock = EolZoomXBlock(runtime, field_data, scope_ids)
         xblock.xmodule_runtime = runtime
         xblock.location = course.id  # Example of location
+        xblock._edited_by = XBLOCK_RUNTIME_USER_ID
         return xblock
 
     def setUp(self):
@@ -469,8 +472,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         """
             Check if error message is not triggered when a meeting is successfully configured
             Have two cases of page render:
-            1. Staff user
-            2. Student user
+            1. Staff user (host)
+            2. Staff user (not host)
+            3. Student user
         """
         self.xblock.meeting_id = 'meeting_id'
         self.xblock.date = '2020-12-26'
@@ -482,17 +486,30 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.start_url = "start_url_example"
         self.xblock.join_url = "join_url_example"
 
-        # 1. Staff user
+        # 1. Staff user host
+        self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID
         self.xblock.runtime.user_is_staff = True
         student_staff_view = self.xblock.student_view()
         student_staff_view_html = student_staff_view.content
         self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
         self.assertIn('class="button button-green start_meeting-btn"',
                       student_staff_view_html)  # 'Iniciar Transmision' button
+        self.assertNotIn('class="button button-blue join_meeting-btn"',
+                      student_staff_view_html)  # 'Ingresar a la sala' button
+
+        # 2. Staff user not host
+        self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID - 1
+        self.xblock.runtime.user_is_staff = True
+        student_staff_view = self.xblock.student_view()
+        student_staff_view_html = student_staff_view.content
+        self.assertNotIn('class="eolzoom_error"', student_staff_view_html)
+        self.assertNotIn('class="button button-green start_meeting-btn"',
+                      student_staff_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue join_meeting-btn"',
                       student_staff_view_html)  # 'Ingresar a la sala' button
 
-        # 2. Student user
+        # 3. Student user
+        self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID - 1
         self.xblock.runtime.user_is_staff = False
         student_view = self.xblock.student_view()
         student_view_html = student_view.content
@@ -502,12 +519,15 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertIn('class="button button-blue join_meeting-btn"',
                       student_view_html)  # 'Ingresar a la sala' button
 
+    
     def test_author_view(self):
         """
             Test author view:
             1. Without Configurations
             2. Load correct html
             3. With Configurations
+            3.a Author is host (edx_created_by)
+            3.b Author is not host (edx_created_by)
         """
         # 1. Without Configurations
         author_view = self.xblock.author_view()
@@ -524,15 +544,28 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.time = '23:32'
         self.xblock.description = 'description'
         self.xblock.duration = 120
-        self.xblock.created_by = self.staff_user.id
+        self.xblock.created_by = self.staff_user.email
         self.xblock.created_location = self.xblock.location._to_string()
         self.xblock.start_url = "start_url_example"
         self.xblock.join_url = "join_url_example"
-
-        author_view = self.xblock.student_view()
+        
+        # 3.a Author is host
+        self.xblock.edx_created_by = XBLOCK_RUNTIME_USER_ID
+        author_view = self.xblock.author_view()
         author_view_html = author_view.content
         self.assertNotIn('class="eolzoom_error"', author_view_html)
         self.assertIn('class="button button-green start_meeting-btn"',
+                      author_view_html)  # 'Iniciar Transmision' button
+        self.assertNotIn('class="button button-blue join_meeting-btn"',
+                      author_view_html)  # 'Ingresar a la sala' button
+
+        
+        # 3.b Author is not host
+        self.xblock.edx_created_by = 'another'
+        author_view = self.xblock.author_view()
+        author_view_html = author_view.content
+        self.assertNotIn('class="eolzoom_error"', author_view_html)
+        self.assertNotIn('class="button button-green start_meeting-btn"',
                       author_view_html)  # 'Iniciar Transmision' button
         self.assertIn('class="button button-blue join_meeting-btn"',
                       author_view_html)  # 'Ingresar a la sala' button

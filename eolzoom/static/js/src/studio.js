@@ -128,7 +128,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     * Show content if meeting is not already created 
                     * if meeting is already created, show only if user is the owner of this meeting
                     */ 
-                    if(!settings.meeting_id || settings.created_by == user_profile.email) {
+                    if(!settings.meeting_id || (settings.created_by == user_profile.email && settings.user_id == settings.edx_created_by) ) {
                         $('.eolzoom_studio li').show();
                         $('.save-button').show();
                     } else {

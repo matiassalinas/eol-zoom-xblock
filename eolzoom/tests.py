@@ -834,7 +834,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock.time = '23:32'
         self.xblock.description = 'description'
         self.xblock.duration = 120
-        self.xblock.created_by = self.staff_user.id
+        self.xblock.created_by = self.staff_user.email
         self.xblock.created_location = self.xblock.location._to_string()
         self.xblock.start_url = "start_url_example"
         self.xblock.join_url = "join_url_example"
@@ -933,7 +933,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             'time': '10:10',
             'duration': 80,
             'meeting_id': 'new_meeting_id',
-            'created_by': self.staff_user.id,
+            'created_by': self.staff_user.email,
             'created_location': self.xblock.location._to_string(),
             'start_url': 'start_url_example',
             'join_url': 'join_url_example',
@@ -954,7 +954,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.join_url, 'join_url_example')
         self.assertEqual(self.xblock.meeting_password, 'meeting_password')
         self.assertEqual(self.xblock.restricted_access, False)
-        self.assertEqual(self.xblock.created_by, self.staff_user.id)
+        self.assertEqual(self.xblock.created_by, self.staff_user.email)
         self.assertEqual(
             self.xblock.created_location,
             self.xblock.location._to_string())

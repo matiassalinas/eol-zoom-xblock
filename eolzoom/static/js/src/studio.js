@@ -13,6 +13,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var time = $(element).find('input[name=time]').val();
         var duration = $(element).find('input[name=duration]').val();
         var created_by = $(element).find('#created_by').text();
+        var restricted_access = $(element).find('#restricted_access').val();
+        restricted_access = restricted_access == '1';
         if(display_name == "" || description == "" || date == "" || time == "" || duration < 0 || duration == "") {
             alert("Datos inválidos. Revisa nuevamente la información ingresada");
             e.preventDefault();
@@ -25,6 +27,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('duration', duration);
         form_data.append('created_by', created_by);
         form_data.append('meeting_id', settings.meeting_id);
+        form_data.append('restricted_access', restricted_access);
 
         /*
         * Set update meeting url if already have a meeting_id
@@ -54,11 +57,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     // If Update, set the same urls
                     form_data.set('start_url', settings.start_url);
                     form_data.set('join_url', settings.join_url);
+                    form_data.set('meeting_password', settings.meeting_password);
                 } else {
                     // If Create, set the urls and id
                     form_data.set('start_url', data.start_url);
                     form_data.set('join_url', data.join_url);
                     form_data.set('meeting_id', data.meeting_id);
+                    form_data.set('meeting_password', data.meeting_password);
                 }
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
@@ -103,6 +108,10 @@ function EolZoomStudioXBlock(runtime, element, settings) {
 
         check_is_logged();
         get_login_url();
+
+        if (settings.restricted_access) {
+            $('#restricted_access').prop('disabled', true);
+        }
         function check_is_logged() {
             /*
             * Check if user is logged at Eol Zoom API
@@ -119,9 +128,14 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     * Show content if meeting is not already created 
                     * if meeting is already created, show only if user is the owner of this meeting
                     */ 
-                    if(!settings.meeting_id || settings.created_by == user_profile.email) {
+                    if(!settings.meeting_id || (settings.created_by == user_profile.email && settings.user_id == settings.edx_created_by) ) {
                         $('.eolzoom_studio li').show();
                         $('.save-button').show();
+                        // Disable restricted_access select if user doesn't have PRO PLAN
+                        if(user_profile.type == 1 && !settings.restricted_access) {
+                            $('#restricted_access').prop('disabled', true);
+                            $('#restricted_access_warning').html("No cuentas con licencia PRO ('Licensed') por lo que se ha deshabilitado esta configuración. <a href='" + get_login_url() +  "' >Presiona aquí para obtener una licencia PRO</a> (si tienes problemas, contacta a la mesa de ayuda de la plataforma).");
+                        }
                     } else {
                         $('.logging-container').html("No tienes permisos para modificar esta transmisión.");
                     }

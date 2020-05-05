@@ -1,11 +1,11 @@
-function EolZoomXBlock(runtime, element, settings) {
-
+function EolZoomAuthorXBlock(runtime, element, settings) {
     $(function($) {
         /* If restricted access is true, start meeting through the api */
         if (settings.restricted_access) {
             start_meeting_api_url();
             $(element).find('.eolzoom_block .join_meeting-btn').click(join_meeting_api_url);
         }
+        
         function start_meeting_api_url() {
             // send json encoded base 64
             args = {
@@ -81,4 +81,5 @@ function EolZoomXBlock(runtime, element, settings) {
         }
 
     });
-}
+  
+  }

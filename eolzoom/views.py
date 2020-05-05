@@ -303,7 +303,7 @@ def start_meeting(request):
 
     user = request.user
     authorization_code = request.GET.get('code')
-    # data with meeting_id and course_id
+    # data with meeting_id and course_id (BASE64)
     data = base64.b64decode(request.GET.get('data'))
     args = json.loads(data)
     redirect_uri = request.build_absolute_uri().split(

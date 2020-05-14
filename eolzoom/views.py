@@ -14,6 +14,7 @@ import base64
 
 from celery import task
 import time
+import threading
 
 from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.api_helper import submit_task
@@ -35,6 +36,9 @@ import string
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+MAX_REGISTRANT_STATUS = 30  # Max possible (API)
 
 
 def zoom_api(request):
@@ -329,10 +333,15 @@ def start_meeting(request):
     _update_auth(user, token['refresh_token'])
     # Task register meeting users. If already running pass
     try:
-        task_register_meeting_users(request, request.user, args['meeting_id'], args['course_id'])
+        task_register_meeting_users(
+            request,
+            request.user,
+            args['meeting_id'],
+            args['course_id'])
     except AlreadyRunningError:
         pass
     return HttpResponseRedirect(create_start_url(args['meeting_id']))
+
 
 def task_register_meeting_users(request, user_meeting, meeting_id, course_id):
     """
@@ -341,7 +350,10 @@ def task_register_meeting_users(request, user_meeting, meeting_id, course_id):
     course_key = CourseKey.from_string(course_id)
     task_type = 'EOL_ZOOM_REGISTER_MEETING_USERS'
     task_class = run_task_register_meeting_users
-    task_input = {'user_meeting_id': user_meeting.id, 'meeting_id': meeting_id, 'course_id': course_id}
+    task_input = {
+        'user_meeting_id': user_meeting.id,
+        'meeting_id': meeting_id,
+        'course_id': course_id}
     task_key = meeting_id
     return submit_task(
         request,
@@ -351,7 +363,8 @@ def task_register_meeting_users(request, user_meeting, meeting_id, course_id):
         task_input,
         task_key)
 
-@task(base=BaseInstructorTask,queue='edx.lms.core.high')
+
+@task(base=BaseInstructorTask, queue='edx.lms.core.high')
 def run_task_register_meeting_users(entry_id, xmodule_instance_args):
     """
         Run task at edx.lms.core.high
@@ -360,6 +373,7 @@ def run_task_register_meeting_users(entry_id, xmodule_instance_args):
     task_fn = partial(register_meeting_users, xmodule_instance_args)
     return run_main_task(entry_id, task_fn, action_name)
 
+
 def register_meeting_users(
         _xmodule_instance_args,
         _entry_id,
@@ -367,27 +381,46 @@ def register_meeting_users(
         task_input,
         action_name):
     """
-        Register enrolled students and approve
+        Register enrolled students (using Threads) and approve
     """
     user_meeting_id = task_input["user_meeting_id"]
     user_meeting = User.objects.get(id=user_meeting_id)
     meeting_id = task_input["meeting_id"]
-    # register enrolled students
-    if meeting_registrant(
-            user_meeting,
-            meeting_id,
-            text_type(course_id)):
-        registrants = get_join_url(
-            user_meeting,
-            meeting_id,
-            text_type(course_id))
-        if 'error' not in registrants:
-            _submit_join_url(registrants['registrants'], meeting_id)
-            logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
-        else:
-            logger.error("Error Meeting get join url")
+
+    refresh_token = _get_refresh_token(user_meeting)
+    token = get_access_token(user_meeting, refresh_token)
+    if 'error' in token:
+        logger.error("Error get_access_token {}".format(token['error']))
+        return {
+            'error': 'Error get_access_token'
+        }
+    access_token = token['access_token']
+
+    enrolled_students = get_students(user_meeting, text_type(course_id))
+    threads = []
+    for i in range(0, len(enrolled_students), MAX_REGISTRANT_STATUS):
+        t = threading.Thread(target=meeting_registrant,
+                             args=(user_meeting,
+                                   meeting_id,
+                                   enrolled_students[i:i + MAX_REGISTRANT_STATUS],
+                                   access_token))
+        threads.append(t)
+        t.start()  # instantiate thread
+    for t in threads:
+        t.join()  # wait until threads has completed
+
+    # Get join url for all students and submit to model
+    registrants = get_join_url(
+        user_meeting,
+        meeting_id,
+        text_type(course_id),
+        access_token)
+    if 'error' not in registrants:
+        _submit_join_url(registrants['registrants'], meeting_id)
+        logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
     else:
-        logger.error("Error Meeting Registrant")
+        logger.error("Error Meeting get join url")
+
 
 def _submit_join_url(registrants, meeting_id):
     """
@@ -402,18 +435,10 @@ def _submit_join_url(registrants, meeting_id):
         )
 
 
-def get_join_url(user_meeting, meeting_id, course_id):
+def get_join_url(user_meeting, meeting_id, course_id, access_token):
     """
         Get registrants with join url
     """
-    refresh_token = _get_refresh_token(user_meeting)
-    token = get_access_token(user_meeting, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
-        return {
-            'error': 'Error get_access_token'
-        }
-    access_token = token['access_token']
     headers = {
         "Authorization": "Bearer {}".format(access_token)
     }
@@ -434,6 +459,9 @@ def get_join_url(user_meeting, meeting_id, course_id):
 
 
 def get_student_join_url(request):
+    """
+        Get meeting join url for a specific student. Check if students is registered or meeting has started
+    """
     # check method and params
     if request.method != "GET":
         return HttpResponse(status=400)
@@ -455,11 +483,10 @@ def get_student_join_url(request):
             return JsonResponse({'status': False, 'error_type': 'NOT_STARTED'})
 
 
-def meeting_registrant(user_meeting, meeting_id, course_id):
+def meeting_registrant(user_meeting, meeting_id, students, access_token):
     """
-        Get all enrolled students, create meeting registrant and approve
+        Create meeting registrant for a set of students and approve it
     """
-    students = get_students(user_meeting, course_id)
     students_registrant = []  # List of students registrant
     platform_name = configuration_helpers.get_value(
         'PLATFORM_NAME', settings.PLATFORM_NAME).encode('utf-8').upper()
@@ -470,7 +497,8 @@ def meeting_registrant(user_meeting, meeting_id, course_id):
             'first_name': student.profile.name,
             'last_name': platform_name
         }
-        data = get_meeting_registrant(meeting_id, user_meeting, student_info)
+        data = get_meeting_registrant(
+            meeting_id, user_meeting, student_info, access_token)
         if 'registrant_id' in data and 'error' not in data:
             students_registrant.append({
                 'id': data['registrant_id'],
@@ -478,8 +506,11 @@ def meeting_registrant(user_meeting, meeting_id, course_id):
             })
     # Approve all registrant student status
     status = set_registrant_status(
-        meeting_id, user_meeting, students_registrant)
-    return True if 'error' not in status else False
+        meeting_id, user_meeting, students_registrant, access_token)
+    if 'error' in status:
+        logger.error("Error Meeting Registrant")
+        return False
+    return True
 
 
 def get_students(user, course_id):
@@ -494,18 +525,15 @@ def get_students(user, course_id):
     return students
 
 
-def get_meeting_registrant(meeting_id, user, student, rate_limit=0):
+def get_meeting_registrant(
+        meeting_id,
+        user,
+        student,
+        access_token,
+        rate_limit=0):
     """
         Create a meeting registrant (without approve) for specific student
     """
-    refresh_token = _get_refresh_token(user)
-    token = get_access_token(user, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
-        return {
-            'error': 'Error get_access_token'
-        }
-    access_token = token['access_token']
     headers = {
         "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
@@ -521,9 +549,12 @@ def get_meeting_registrant(meeting_id, user, student, rate_limit=0):
                 When exceed the rate limits allowed for an API request wait one second and retry (max 10 times)
             """
             rate_limit += 1
-            logger.warning("[{}] You have reached the maximum per-second rate limit for this API. Retry ({})".format(meeting_id, rate_limit))
+            logger.warning(
+                "[{}] You have reached the maximum per-second rate limit for this API. Retry ({})".format(
+                    meeting_id, rate_limit))
             time.sleep(1.)
-            return get_meeting_registrant(meeting_id, user, student, rate_limit)
+            return get_meeting_registrant(
+                meeting_id, user, student, rate_limit)
         logger.error('Registration fail {}'.format(r.text))
         return {
             'error': 'Registration fail'
@@ -531,18 +562,15 @@ def get_meeting_registrant(meeting_id, user, student, rate_limit=0):
     return r.json()
 
 
-def set_registrant_status(meeting_id, user, registrants, rate_limit=0):
+def set_registrant_status(
+        meeting_id,
+        user,
+        registrants,
+        access_token,
+        rate_limit=0):
     """
         Set registrant status to 'approve' for a list of student (registrants)
     """
-    refresh_token = _get_refresh_token(user)
-    token = get_access_token(user, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
-        return {
-            'error': 'Error get_access_token'
-        }
-    access_token = token['access_token']
     headers = {
         "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
@@ -563,9 +591,12 @@ def set_registrant_status(meeting_id, user, registrants, rate_limit=0):
                 When exceed the rate limits allowed for an API request wait one second and retry (max 10 times)
             """
             rate_limit += 1
-            logger.warning("[{}] You have reached the maximum per-second rate limit for this API. Retry ({})".format(meeting_id, rate_limit))
+            logger.warning(
+                "[{}] You have reached the maximum per-second rate limit for this API. Retry ({})".format(
+                    meeting_id, rate_limit))
             time.sleep(1.)
-            return set_registrant_status(meeting_id, user, registrants, rate_limit)
+            return set_registrant_status(
+                meeting_id, user, registrants, rate_limit)
         logger.error('Set registrant status fail {}'.format(r.status_code))
         return {
             'error': 'Set registrant status fail'

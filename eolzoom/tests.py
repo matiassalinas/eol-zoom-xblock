@@ -394,13 +394,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             1. Registration Success
             2. Registration Error
         """
-        access_token_response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjIwNTMxODczOTQsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDczOTQsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI2fQ.DwuqOzywRrQO2a6yp0K_6V-hR_i_mOB62flkr0_NfFdYsSqahIRRGk1GlUTQnFzHd896XDKf_FnSSvoJg_tzuQ",
-            "expires_in": 3599,
-            "scope": "user:read"
-        }
+        access_token = "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA"
+
         registrants_response = {
             "id": 85746065,
             "registrant_id": "a",
@@ -408,10 +403,6 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             "topic": "reprehenderit ea ut ex Excepteur"
         }
         post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response),
             namedtuple(
                 "Request", [
                     "status_code", "json"])(
@@ -424,45 +415,29 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         }
 
         meeting_registrant = views.get_meeting_registrant(
-            'meeting_id', self.user, student_info)
+            'meeting_id', self.user, student_info, access_token)
         self.assertEqual(meeting_registrant, registrants_response)
 
         registrants_response = "error"
         post.side_effect = [
             namedtuple(
                 "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response),
-            namedtuple(
-                "Request", [
                     "status_code", "text"])(
                 300, registrants_response), ]
 
         meeting_registrant = views.get_meeting_registrant(
-            'meeting_id', self.user, student_info)
+            'meeting_id', self.user, student_info, access_token)
         self.assertEqual(meeting_registrant, {'error': 'Registration fail'})
 
-    @patch("requests.post")
     @patch("requests.put")
-    def test_set_meeting_status(self, put, post):
+    def test_set_meeting_status(self, put):
         """
             Test set meeting for a set of students
             1. Approval success
             2. Error
         """
-        access_token_response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjIwNTMxODczOTQsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDczOTQsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI2fQ.DwuqOzywRrQO2a6yp0K_6V-hR_i_mOB62flkr0_NfFdYsSqahIRRGk1GlUTQnFzHd896XDKf_FnSSvoJg_tzuQ",
-            "expires_in": 3599,
-            "scope": "user:read"
-        }
+        access_token = "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA"
         status_response = "Meeting updated."
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response), ]
         put.side_effect = [
             namedtuple(
                 "Request", [
@@ -480,14 +455,9 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             },
         ]
         meeting_status = views.set_registrant_status(
-            'meeting_id', self.user, students)
+            'meeting_id', self.user, students, access_token)
         self.assertEqual(meeting_status, {'success': 'approved'})
 
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response), ]
         put.side_effect = [
             namedtuple(
                 "Request", [
@@ -495,7 +465,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 400, status_response),
         ]
         meeting_status = views.set_registrant_status(
-            'meeting_id', self.user, students)
+            'meeting_id', self.user, students, access_token)
         self.assertEqual(
             meeting_status, {
                 'error': 'Set registrant status fail'})
@@ -519,11 +489,15 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             user=new_student,
             course_id=self.course.id)
 
+        students = views.get_students(self.user, text_type(self.course.id))
+
+        access_token = "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA"
+
         get_meeting_registrant.side_effect = [
             {'registrant_id': 'registrant_id_1'}, {'registrant_id': 'registrant_id_2'}]
         set_registrant_status.side_effect = [{'success': 'approved'}]
         meeting_registrant = views.meeting_registrant(
-            self.user, 'meeting_id', text_type(self.course.id))
+            self.user, 'meeting_id', students, access_token)
         self.assertEqual(meeting_registrant, True)
 
         get_meeting_registrant.side_effect = [
@@ -531,7 +505,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         set_registrant_status.side_effect = [
             {'error': 'Set registrant status fail'}]
         meeting_registrant = views.meeting_registrant(
-            self.user, 'meeting_id', text_type(self.course.id))
+            self.user, 'meeting_id', students, access_token)
         self.assertEqual(meeting_registrant, False)
 
     def test_submit_join_url(self):
@@ -573,25 +547,13 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 4)
 
-    @patch("requests.post")
     @patch("requests.get")
-    def test_get_join_url(self, get, post):
+    def test_get_join_url(self, get):
         """
             Test get join url (set of registrants with their url).
             Success and Fail
         """
-        access_token_response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjIwNTMxODczOTQsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDczOTQsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI2fQ.DwuqOzywRrQO2a6yp0K_6V-hR_i_mOB62flkr0_NfFdYsSqahIRRGk1GlUTQnFzHd896XDKf_FnSSvoJg_tzuQ",
-            "expires_in": 3599,
-            "scope": "user:read"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response), ]
+        access_token = "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA"
         join_url_response = {
             "page_count": 1,
             "page_number": 1,
@@ -616,14 +578,9 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
 
         registrants = views.get_join_url(
             self.user, 'meeting_id', text_type(
-                self.course.id))
+                self.course.id), access_token)
         self.assertEqual(registrants, join_url_response)
 
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:access_token_response), ]
         get.side_effect = [
             namedtuple(
                 "Request", [
@@ -631,7 +588,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 400, ["error"]), ]
         registrants = views.get_join_url(
             self.user, 'meeting_id', text_type(
-                self.course.id))
+                self.course.id), access_token)
         self.assertEqual(registrants, {'error': 'Get Join URL fail'})
 
     @patch("eolzoom.views.get_join_url")

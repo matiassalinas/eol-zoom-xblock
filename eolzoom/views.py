@@ -498,7 +498,7 @@ def meeting_registrant(user_meeting, meeting_id, students, access_token):
         # Student name at Zoom == 'profile_name'+' platform_name'
         student_info = {
             'email': student.email,
-            'first_name': student.profile.name,
+            'first_name': student.profile.name if student.profile.name != '' else student.username,
             'last_name': platform_name
         }
         data = get_meeting_registrant(
@@ -559,7 +559,7 @@ def get_meeting_registrant(
             time.sleep(1.)
             return get_meeting_registrant(
                 meeting_id, user, student, rate_limit)
-        logger.error('Registration fail {}'.format(r.text))
+        logger.error('{} Registration fail {}'.format(r.status_code, r.text))
         return {
             'error': 'Registration fail'
         }

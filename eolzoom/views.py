@@ -415,11 +415,8 @@ def register_meeting_users(
         meeting_id,
         text_type(course_id),
         access_token)
-    if 'error' not in registrants:
-        _submit_join_url(registrants['registrants'], meeting_id)
-        logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
-    else:
-        logger.error("Error Meeting get join url")
+    _submit_join_url(registrants, meeting_id)
+    logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
 
 
 def _submit_join_url(registrants, meeting_id):
@@ -437,25 +434,32 @@ def _submit_join_url(registrants, meeting_id):
 
 def get_join_url(user_meeting, meeting_id, course_id, access_token):
     """
-        Get registrants with join url
+        Get registrants with join url (use pagination)
     """
     headers = {
         "Authorization": "Bearer {}".format(access_token)
     }
-    body = {
-        'status': 'approved',
-    }
-    url = "https://api.zoom.us/v2/meetings/{}/registrants".format(meeting_id)
-    r = requests.get(
-        url,
-        data=json.dumps(body),
-        headers=headers)
-    if r.status_code != 200:
-        logger.error('Get Join URL fail {}'.format(r.text))
-        return {
-            'error': 'Get Join URL fail'
+    page_count = 1
+    i = 1
+    registrants = []
+    while i <= page_count:
+        params = {
+            'status': 'approved',
+            'page_size': 300, # max 300 
+            'page_number': i
         }
-    return r.json()
+        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(meeting_id, urllib.urlencode(params))
+        r = requests.get(
+            url,
+            headers=headers)
+        if r.status_code != 200:
+            logger.error('Get Join URL fail {}'.format(r.text))
+        else:
+            data = r.json()
+            page_count = data['page_count']
+            registrants.extend(data['registrants'])
+        i+= 1
+    return registrants
 
 
 def get_student_join_url(request):

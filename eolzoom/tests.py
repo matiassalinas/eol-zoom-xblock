@@ -579,7 +579,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         registrants = views.get_join_url(
             self.user, 'meeting_id', text_type(
                 self.course.id), access_token)
-        self.assertEqual(registrants, join_url_response)
+        self.assertEqual(registrants, join_url_response['registrants'])
 
         get.side_effect = [
             namedtuple(
@@ -589,7 +589,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         registrants = views.get_join_url(
             self.user, 'meeting_id', text_type(
                 self.course.id), access_token)
-        self.assertEqual(registrants, {'error': 'Get Join URL fail'})
+        self.assertEqual(registrants, [])
 
     @patch("eolzoom.views.get_join_url")
     @patch("eolzoom.views.meeting_registrant")

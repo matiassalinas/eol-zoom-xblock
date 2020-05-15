@@ -15,6 +15,7 @@ import base64
 from celery import task
 import time
 import threading
+from multiprocessing import BoundedSemaphore
 
 from lms.djangoapps.instructor_task.tasks_base import BaseInstructorTask
 from lms.djangoapps.instructor_task.api_helper import submit_task
@@ -398,12 +399,14 @@ def register_meeting_users(
 
     enrolled_students = get_students(user_meeting, text_type(course_id))
     threads = []
+    pool = BoundedSemaphore(10)
     for i in range(0, len(enrolled_students), MAX_REGISTRANT_STATUS):
         t = threading.Thread(target=meeting_registrant,
                              args=(user_meeting,
                                    meeting_id,
                                    enrolled_students[i:i + MAX_REGISTRANT_STATUS],
-                                   access_token))
+                                   access_token,
+                                   pool))
         threads.append(t)
         t.start()  # instantiate thread
     for t in threads:
@@ -487,34 +490,38 @@ def get_student_join_url(request):
             return JsonResponse({'status': False, 'error_type': 'NOT_STARTED'})
 
 
-def meeting_registrant(user_meeting, meeting_id, students, access_token):
+def meeting_registrant(user_meeting, meeting_id, students, access_token, pool):
     """
         Create meeting registrant for a set of students and approve it
     """
     students_registrant = []  # List of students registrant
     platform_name = configuration_helpers.get_value(
         'PLATFORM_NAME', settings.PLATFORM_NAME).encode('utf-8').upper()
-    for student in students:
-        # Student name at Zoom == 'profile_name'+' platform_name'
-        student_info = {
-            'email': student.email,
-            'first_name': student.profile.name if student.profile.name != '' else student.username,
-            'last_name': platform_name
-        }
-        data = get_meeting_registrant(
-            meeting_id, user_meeting, student_info, access_token)
-        if 'registrant_id' in data and 'error' not in data:
-            students_registrant.append({
-                'id': data['registrant_id'],
-                'email': student_info['email']
-            })
-    # Approve all registrant student status
-    status = set_registrant_status(
-        meeting_id, user_meeting, students_registrant, access_token)
-    if 'error' in status:
-        logger.error("Error Meeting Registrant")
-        return False
-    return True
+    pool.acquire()
+    try:
+        for student in students:
+            # Student name at Zoom == 'profile_name'+' platform_name'
+            student_info = {
+                'email': student.email,
+                'first_name': student.profile.name if student.profile.name != '' else student.username,
+                'last_name': platform_name
+            }
+            data = get_meeting_registrant(
+                meeting_id, user_meeting, student_info, access_token)
+            if 'registrant_id' in data and 'error' not in data:
+                students_registrant.append({
+                    'id': data['registrant_id'],
+                    'email': student_info['email']
+                })
+        # Approve all registrant student status
+        status = set_registrant_status(
+            meeting_id, user_meeting, students_registrant, access_token)
+        if 'error' in status:
+            logger.error("Error Meeting Registrant")
+            return False
+        return True
+    finally:
+        pool.release()
 
 
 def get_students(user, course_id):

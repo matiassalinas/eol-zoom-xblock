@@ -558,7 +558,7 @@ def get_meeting_registrant(
                     meeting_id, rate_limit))
             time.sleep(1.)
             return get_meeting_registrant(
-                meeting_id, user, student, rate_limit)
+                meeting_id, user, student, access_token, rate_limit)
         logger.error('{} Registration fail {}'.format(r.status_code, r.text))
         return {
             'error': 'Registration fail'

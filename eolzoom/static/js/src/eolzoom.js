@@ -4,6 +4,7 @@ function EolZoomXBlock(runtime, element, settings) {
         /* If restricted access is true, start meeting through the api */
         if (settings.restricted_access) {
             start_meeting_api_url();
+            $(element).find('.eolzoom_block .join_meeting-btn').attr('href', '#');
             $(element).find('.eolzoom_block .join_meeting-btn').click(join_meeting_api_url);
         }
         function start_meeting_api_url() {

@@ -124,7 +124,9 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     $('.logging-container .zoom-hint').addClass('zoom-hint-success').html("<span>Cuentas con una sesión de Zoom correctamente iniciada</span>");
                     $('.logging-container .zoom-hint').append("<br><span style='color: black;'>Tu cuenta ( <span id='created_by'>" + user_profile.email + "</span> ) tiene una licencia " + zoom_plan[user_profile.type] + "</span>");
                     $('.logging-container .zoom-hint').append("<br><span style='color: black;'>Si presentas problemas, presiona <a href='" + get_login_url() +  "' >este enlace.</a></span>");
-                    $('.logging-container .zoom-hint').append("<br><span style='color: #ff6422;'>Recuerda que las videollamdas tienen una capacidad máxima de <strong>300 participantes</strong>.</span>");
+                    if(settings.enrolled_students > 300) {
+                        $('.logging-container .zoom-hint').append("<br><span style='color: #ff6422;'>Recuerda que las videollamadas tienen una capacidad máxima de <strong>300 participantes</strong>. Actualmente hay <strong>"+ settings.enrolled_students +"</strong> estudiantes inscritos en el curso.</span>");
+                    }
                     /*
                     * Show content if meeting is not already created 
                     * if meeting is already created, show only if user is the owner of this meeting

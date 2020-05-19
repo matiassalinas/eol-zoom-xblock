@@ -166,11 +166,11 @@ class EolZoomXBlock(XBlock):
         """
         Get a count of all students enrolled to course
         """
-        from django.contrib.auth.models import User
+        from student.models import CourseEnrollment
         course_key = CourseKey.from_string(course_id)
-        students = User.objects.filter(
-            courseenrollment__course_id=course_key,
-            courseenrollment__is_active=1
+        students = CourseEnrollment.objects.filter(
+            course_id=course_key,
+            is_active=1
         ).count()
         return students
     

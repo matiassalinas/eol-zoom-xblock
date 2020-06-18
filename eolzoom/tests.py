@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 
-from openedx.core.lib.tests.tools import assert_true
+
 from mock import patch, Mock
 
 from collections import namedtuple
@@ -25,8 +24,8 @@ from .eolzoom import EolZoomXBlock
 
 from six import text_type
 
-import views
-from models import EolZoomAuth, EolZoomRegistrant
+from . import views
+from .models import EolZoomAuth, EolZoomRegistrant
 
 import logging
 logger = logging.getLogger(__name__)
@@ -70,7 +69,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the user in
             self.client = Client()
-            assert_true(self.client.login(username=uname, password=password))
+            self.assertTrue(self.client.login(username=uname, password=password))
 
             # Create refresh_token
             self.zoom_auth = EolZoomAuth.objects.create(
@@ -365,7 +364,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 200, lambda:response), ]
         get_data = {
             'code': 'authorization_code',
-            'redirect': base64.b64encode('https://eol.uchile.cl/')
+            'redirect': base64.b64encode('https://eol.uchile.cl/'.encode("utf-8"))
         }
         response = self.client.get(reverse('zoom_api'), get_data)
         self.assertEqual(response.status_code, 302)
@@ -627,12 +626,12 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             ],
         }]
         data = {
-            'meeting_id': 'meeting_id',
-            'course_id': text_type(self.course.id)
+            "meeting_id": "meeting_id",
+            "course_id": text_type(self.course.id)
         }
         get_data = {
-            'code': 'code',
-            'data': base64.b64encode(json.dumps(data))
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data).encode("utf-8"))
         }
         response = self.client.get(reverse('start_meeting'), get_data)
         self.assertEqual(response.status_code, 302)
@@ -730,11 +729,11 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the student in
             self.client = Client()
-            assert_true(self.client.login(username=uname, password=password))
+            self.assertTrue(self.client.login(username=uname, password=password))
 
             # Log the user staff in
             self.staff_client = Client()
-            assert_true(
+            self.assertTrue(
                 self.staff_client.login(
                     username='staff_user',
                     password='test'))

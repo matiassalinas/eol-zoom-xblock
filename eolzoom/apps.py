@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+
 
 from django.apps import AppConfig
 from openedx.core.djangoapps.plugins.constants import PluginSettings, PluginURLs, ProjectType, SettingsType
 
 
 class EolZoomConfig(AppConfig):
-    name = u'eolzoom'
+    name = 'eolzoom'
 
     plugin_app = {
         PluginURLs.CONFIG: {
             ProjectType.LMS: {
-                PluginURLs.NAMESPACE: u'',
+                PluginURLs.NAMESPACE: '',
                 PluginURLs.REGEX: r'^',
-                PluginURLs.RELATIVE_PATH: u'urls',
+                PluginURLs.RELATIVE_PATH: 'urls',
             },
             ProjectType.CMS: {
-                PluginURLs.NAMESPACE: u'',
+                PluginURLs.NAMESPACE: '',
                 PluginURLs.REGEX: r'^',
-                PluginURLs.RELATIVE_PATH: u'urls_cms',
+                PluginURLs.RELATIVE_PATH: 'urls_cms',
             }
         },
         PluginSettings.CONFIG: {
             ProjectType.CMS: {
                 SettingsType.COMMON: {
-                    PluginSettings.RELATIVE_PATH: u'settings.common'},
+                    PluginSettings.RELATIVE_PATH: 'settings.common'},
             },
             ProjectType.LMS: {
                 SettingsType.COMMON: {
-                    PluginSettings.RELATIVE_PATH: u'settings.common'},
+                    PluginSettings.RELATIVE_PATH: 'settings.common'},
             },
         }}
 

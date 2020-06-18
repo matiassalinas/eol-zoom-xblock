@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+
 
 from django.contrib.auth.models import User
 
@@ -9,7 +9,7 @@ from django.conf import settings
 
 import requests
 import json
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import base64
 
 from celery import task
@@ -25,7 +25,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.utils.translation import ugettext_noop
 
-from models import EolZoomAuth, EolZoomRegistrant
+from .models import EolZoomAuth, EolZoomRegistrant
 from opaque_keys.edx.keys import CourseKey
 from six import text_type
 
@@ -204,7 +204,7 @@ def get_access_token(user, refresh_token):
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
@@ -237,7 +237,7 @@ def get_refresh_token(authorization_code, redirect_uri):
         'code': authorization_code,
         'redirect_uri': redirect_uri
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
@@ -323,7 +323,7 @@ def start_meeting(request):
     authorization_code = request.GET.get('code')
     # data with meeting_id and course_id (BASE64)
     data = base64.b64decode(request.GET.get('data'))
-    args = json.loads(data)
+    args = json.loads(data.decode("utf-8"))
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
     token = get_refresh_token(authorization_code, redirect_uri)
@@ -448,7 +448,7 @@ def get_join_url(user_meeting, meeting_id, course_id, access_token):
             'page_size': 300, # max 300 
             'page_number': i
         }
-        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(meeting_id, urllib.urlencode(params))
+        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(meeting_id, urllib.parse.urlencode(params))
         r = requests.get(
             url,
             headers=headers)
@@ -499,7 +499,7 @@ def meeting_registrant(user_meeting, meeting_id, students, access_token):
         student_info = {
             'email': student.email,
             'first_name': student.profile.name if student.profile.name != '' else student.username,
-            'last_name': platform_name
+            'last_name': platform_name.decode('utf-8')
         }
         data = get_meeting_registrant(
             meeting_id, user_meeting, student_info, access_token)

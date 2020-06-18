@@ -62,3 +62,7 @@ target/
 
 #OSX
 *.DS_Store
+
+
+# .bak files
+*.bak

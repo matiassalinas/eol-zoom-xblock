@@ -234,8 +234,7 @@ class EolZoomXBlock(XBlock):
         self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
         self.edx_created_by = self._edited_by
-        return Response(json.dumps({'result': 'success'}),
-                        content_type='application/json')
+        return Response({'result': 'success'})
 
     def get_status(self, is_lms):
         """
@@ -277,7 +276,7 @@ class EolZoomXBlock(XBlock):
         """
         block = runtime.construct_xblock_from_class(cls, keys)
 
-        for name, value in node.items():  # lxml has no iteritems
+        for name, value in list(node.items()):  # lxml has no iteritems
             if(name != 'meeting_id' and name != 'created_by' and name != 'created_location'):
                 cls._set_field_if_present(block, name, value, {})
 

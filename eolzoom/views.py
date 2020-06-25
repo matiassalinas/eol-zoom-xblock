@@ -209,10 +209,13 @@ def get_access_token(user, refresh_token):
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
     r = requests.post(url, headers=headers)
-    token = r.json()
-    if 'error' not in token:
-        _update_auth(user, token['refresh_token'])  # Update refresh_token
-    return token
+    try:
+        token = r.json()
+        if 'error' not in token:
+            _update_auth(user, token['refresh_token'])  # Update refresh_token
+        return token
+    except:
+        return {'error': 'json response error'}
 
 
 def _get_refresh_token(user):
@@ -242,7 +245,10 @@ def get_refresh_token(authorization_code, redirect_uri):
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
     r = requests.post(url, headers=headers)
-    return r.json()
+    try:
+        return r.json()
+    except:
+        return {'error': 'json response error'}
 
 
 def _update_auth(user, refresh_token):

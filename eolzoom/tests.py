@@ -24,7 +24,7 @@ from .eolzoom import EolZoomXBlock
 from six import text_type
 import urllib.parse
 from urllib.parse import parse_qs
-from . import views, youtube_views
+from . import views, youtube_views, utils_youtube
 from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from datetime import datetime as dt
 import datetime
@@ -1001,8 +1001,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(GOOGLE_REDIRECT_URIS=[
                        "https://studio.test.cl/zoom/callback_google_auth"])
     @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
-    @patch('eolzoom.youtube_views.check_permission_live')
-    @patch('eolzoom.youtube_views.check_permission_channels')
+    @patch('eolzoom.utils_youtube.check_permission_live')
+    @patch('eolzoom.utils_youtube.check_permission_channels')
     @patch('google_auth_oauthlib.flow.Flow.fetch_token')
     def test_callback_google_auth(self, flow, channel, live):
         """
@@ -1192,8 +1192,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
-    @patch('eolzoom.youtube_views.check_permission_live')
-    @patch('eolzoom.youtube_views.check_permission_channels')
+    @patch('eolzoom.utils_youtube.check_permission_live')
+    @patch('eolzoom.utils_youtube.check_permission_channels')
     def test_youtube_validate(self, channel, live):
         """
             Test youtube_validate normal process
@@ -1224,8 +1224,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
-    @patch('eolzoom.youtube_views.check_permission_live')
-    @patch('eolzoom.youtube_views.check_permission_channels')
+    @patch('eolzoom.utils_youtube.check_permission_live')
+    @patch('eolzoom.utils_youtube.check_permission_channels')
     def test_youtube_validate_not_channel_live(self, channel, live):
         """
             Test youtube_validate if user dont have channel or live permission
@@ -1282,7 +1282,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
-    @patch('eolzoom.youtube_views.update_live_in_youtube')
+    @patch('eolzoom.utils_youtube.update_live_in_youtube')
     def test_update_livebroadcast(self, updt_yt):
         """
             Test update_livebroadcast normal process
@@ -1317,7 +1317,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
-    @patch('eolzoom.youtube_views.update_live_in_youtube')
+    @patch('eolzoom.utils_youtube.update_live_in_youtube')
     def test_update_livebroadcast_wrong_credentials(self, updt_yt):
         """
             Test update_livebroadcast if credential is wrong
@@ -1406,7 +1406,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
-    @patch('eolzoom.youtube_views.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
     @patch("requests.patch")
     @patch("requests.post")
     def test_create_livebroadcast(self, post, patch, stream_dict):
@@ -1469,7 +1469,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['status'], 'error')
 
     def test_create_livebroadcast_no_yt(self):
-         """
+        """
             Test create_livebroadcast if fail create youtube objects
         """
         post_data = {
@@ -1510,7 +1510,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     
     @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
-    @patch('eolzoom.youtube_views.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
     def test_create_livebroadcast_fail_live(self, stream_dict):
         """
             Test create_livebroadcast if fail in create live on youtube  
@@ -1539,7 +1539,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     
     @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
-    @patch('eolzoom.youtube_views.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
     @patch("requests.patch")
     @patch("requests.post")
     def test_create_livebroadcast_fail_update_meeting_zoom(self, post, patch, stream_dict):

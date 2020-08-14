@@ -15,8 +15,16 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var created_by = $(element).find('#created_by').text();
         var restricted_access = $(element).find('#restricted_access').val();
         restricted_access = restricted_access == '1';
+        var google_access = $(element).find('#google_access').val();
+        var youtube_permission_enabled = $(element).find('input[name=youtube_permission_enabled]').val();
+        google_access = google_access == '1';
         if(display_name == "" || description == "" || date == "" || time == "" || duration < 0 || duration == "") {
             alert("Datos inválidos. Revisa nuevamente la información ingresada");
+            e.preventDefault();
+            return;
+        }
+        if(youtube_permission_enabled != "1" && google_access) {
+            alert("Permisos insufiecientes con la cuenta de Google asociada");
             e.preventDefault();
             return;
         }
@@ -27,7 +35,9 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('duration', duration);
         form_data.append('created_by', created_by);
         form_data.append('meeting_id', settings.meeting_id);
+        form_data.append('broadcast_id', settings.broadcast_id);
         form_data.append('restricted_access', restricted_access);
+        form_data.append('google_access', google_access);
 
         /*
         * Set update meeting url if already have a meeting_id
@@ -36,6 +46,11 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             url_meeting = settings.url_update_meeting;
         } else {
             url_meeting = settings.url_new_meeting;
+        }
+        if(settings.broadcast_id) {
+            url_livebroadcast = settings.url_update_livebroadcast
+        } else {
+            url_livebroadcast = settings.url_new_livebroadcast
         }
         /*
         * Create or Update meeting
@@ -65,6 +80,20 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     form_data.set('meeting_id', data.meeting_id);
                     form_data.set('meeting_password', data.meeting_password);
                 }
+                $.ajax({
+                    url: url_livebroadcast,
+                    dataType: 'text',
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    data: form_data,
+                    type: "POST",
+                    success: function(response){
+                        if (response.status == "ok"){
+                            form_data.set('broadcast_id', response.id_broadcast);
+                        }
+                    }
+                });
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
                 }
@@ -94,6 +123,58 @@ function EolZoomStudioXBlock(runtime, element, settings) {
       e.preventDefault();
     });
 
+    $(element).find('#google_access').on('change', function() {
+        //0: disabled
+        //1: enabled
+        if($(this).find(":selected").val()=="1"){
+            $('#google_access_warning').show();
+            if ($(element).find('input[name=youtube_logged]').val() == "0"){
+                $('#youtube_validate_strong').hide();
+            }
+            if ($(element).find('input[name=youtube_logged]').val() == "1"){
+                $('#youtube_validate_strong').show();
+            }
+        }
+        if($(this).find(":selected").val()=="0"){
+            $('#google_access_warning').hide();
+            $('#youtube_validate_strong').hide();
+        }        
+      });
+    $(element).find('#youtube_validate').bind('click', function(e) {
+        $('#eolzoom_loading_youtube').show();
+        $('#google_access_warning').hide();
+        url = settings.url_youtube_validate;
+        $.get(url, function(data, status){
+            if(data.credentials) { 
+                aux_msg = "Sesión Iniciada.";
+                $(element).find('input[name=youtube_permission_enabled]').val("1");
+                $(element).find('input[name=youtube_logged]').val("1");
+                if(!data.channel){
+                    aux_msg = aux_msg + "</br>Cuenta no posee canal de YouTube."
+                }
+                if(!data.livestream){
+                    aux_msg = aux_msg + "</br>Cuenta no habilitada para realizar Live en Youtube."
+                }
+                if(!data.livestream || !data.channel){
+                    aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                    $(element).find('input[name=youtube_permission_enabled]').val("0");
+                }
+                $('#google_access_warning').html(aux_msg);
+                $('#youtube_validate_strong').show();
+            }
+            else{
+                actual_url = btoa(window.location.href); // encode base64
+                $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
+                $(element).find('input[name=youtube_permission_enabled]').val("0");
+                $(element).find('input[name=youtube_logged]').val("0");
+                $('#youtube_validate_strong').hide();
+            }
+        }).always(function() {
+            $('#eolzoom_loading_youtube').hide();
+            $('#google_access_warning').show();
+        });
+        return false
+      });
     $(function($) {
         var zoom_plan = {
             1: 'Basic',
@@ -101,11 +182,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             3: 'On-prem'
         }
         // Show loading and hide elements
-        $('.eolzoom_loading').show();
+        $('#eolzoom_loading').show();
         $('.eolzoom_studio').hide();
         $('.eolzoom_studio li.field').hide();
         $('.save-button').hide();
-
+        $('#eolzoom_loading_youtube').hide();
+        $('#youtube_validate_strong').hide();
+        check_is_logged_google();
         check_is_logged();
         get_login_url();
 
@@ -144,7 +227,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     }
                 }
             }).always(function() {
-                $('.eolzoom_loading').hide();
+                $('#eolzoom_loading').hide();
                 $('.eolzoom_studio').show();
             });
         }
@@ -159,7 +242,46 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             $('.logging-container .zoom-login-btn').attr('href', login_url);
             return login_url;
         }
-
+        
+        function check_is_logged_google() {
+            /*
+            * Check if user is logged at Google
+            */
+           url = settings.url_is_logged_google;
+           $.get(url, function(data, status){
+                // Show submit button and form whem user is succefully logged
+                if(data.credentials) {
+                    aux_msg = "Sesión Iniciada.";
+                    $(element).find('input[name=youtube_permission_enabled]').val("1");
+                    $(element).find('input[name=youtube_logged]').val("1");
+                    if(!data.channel){
+                        aux_msg = aux_msg + "</br>Cuenta no posee canal de YouTube."
+                    }
+                    if(!data.livestream){
+                        aux_msg = aux_msg + "</br>Cuenta no habilitada para realizar Live en Youtube."
+                    }
+                    if(!data.livestream || !data.channel){
+                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                        $(element).find('input[name=youtube_permission_enabled]').val("0");
+                    }
+                    $('#google_access_warning').html(aux_msg);
+                    $('#youtube_validate_strong').show();
+                }
+                else{
+                    actual_url = btoa(window.location.href); // encode base64
+                    $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
+                    $(element).find('input[name=youtube_permission_enabled]').val("0");
+                    $('#youtube_validate_strong').hide();
+                    $(element).find('input[name=youtube_logged]').val("0");
+                }
+                if(settings.google_access) {
+                    $('#google_access_warning').show();
+                }
+                else{
+                    $('#google_access_warning').hide();
+                    $('#youtube_validate_strong').hide();
+                }
+            });
+        }
     });
-  
   }

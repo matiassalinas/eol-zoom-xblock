@@ -65,7 +65,8 @@ class EolZoomXBlock(XBlock):
     description = String(
         display_name=_("Descripcion"),
         scope=Scope.settings,
-        help=_("Indica una breve descripcion de la videollamada")
+        help=_("Indica una breve descripcion de la videollamada"),
+        default="",
     )
 
     duration = Integer(
@@ -99,6 +100,16 @@ class EolZoomXBlock(XBlock):
         help=_("Solo estudiantes inscritos en el curso podran acceder a esta videollamada")
     )
 
+    google_access = Boolean(
+        display_name=_("Youtube Livestream"),
+        default=False,
+        scope=Scope.settings,
+        help=_("Permite transmitir la reunion de zoom por Youtube")
+    )
+    broadcast_id = String(
+        display_name=_("broadcast_id"),
+        scope=Scope.settings,
+    )
     meeting_password = String(
         display_name=_("Meeting Password"),
         scope=Scope.settings,
@@ -151,12 +162,19 @@ class EolZoomXBlock(XBlock):
             'start_url': self.start_url,
             'join_url': self.join_url,
             'restricted_access': self.restricted_access,
+            'google_access': self.google_access,
+            'url_google_auth': reverse('auth_google'),
+            'url_is_logged_google': reverse('google_is_logged'),
+            'url_youtube_validate': reverse('youtube_validate'),
+            'broadcast_id': self.broadcast_id,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,
                 DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
             'url_new_meeting': reverse('new_scheduled_meeting'),
+            'url_new_livebroadcast': reverse('url_new_livebroadcast'),
+            'url_update_livebroadcast': reverse('url_update_livebroadcast'),
             'url_update_meeting': reverse('update_scheduled_meeting'),
         }
         frag.initialize_js('EolZoomStudioXBlock', json_args=settings)
@@ -231,6 +249,8 @@ class EolZoomXBlock(XBlock):
         self.start_url = request.params['start_url']
         self.join_url = request.params['join_url']
         self.restricted_access = request.params['restricted_access']
+        self.google_access = request.params['google_access']
+        self.broadcast_id = request.params['broadcast_id']
         self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
         self.edx_created_by = self._edited_by

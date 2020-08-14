@@ -11,7 +11,7 @@ import requests
 import json
 import urllib.request, urllib.parse, urllib.error
 import base64
-
+from django.views.generic.base import View
 from celery import task
 import time
 import threading
@@ -24,13 +24,25 @@ from functools import partial
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.utils.translation import ugettext_noop
-
-from .models import EolZoomAuth, EolZoomRegistrant
+from django.shortcuts import render
+from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from opaque_keys.edx.keys import CourseKey
 from six import text_type
 
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
+import httplib2
+import os
+import sys
+
+from apiclient.errors import HttpError
+
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+import googleapiclient.discovery
+from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
+from datetime import datetime as dt
+import datetime
 import random
 import string
 
@@ -178,6 +190,7 @@ def set_scheduled_meeting(request, url, api_method):
                 'join_url': data['join_url'],
                 'meeting_password': body['password']
             }
+            EolZoomMappingUserMeet.objects.create(meeting_id=data['id'], user=user)
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':

@@ -21,6 +21,8 @@ from xblock.fragment import Fragment
 from opaque_keys.edx.keys import CourseKey
 
 # Make '_' a no-op so we can scrape strings
+
+
 def _(text): return text
 
 
@@ -151,7 +153,8 @@ class EolZoomXBlock(XBlock):
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/eolzoom.css"))
         frag.add_javascript(self.resource_string("static/js/src/studio.js"))
-        enrolled_students = self.get_students_count(text_type(self.scope_ids.usage_id.course_key))
+        enrolled_students = self.get_students_count(
+            text_type(self.scope_ids.usage_id.course_key))
 
         settings = {
             'meeting_id': self.meeting_id,
@@ -191,7 +194,7 @@ class EolZoomXBlock(XBlock):
             is_active=1
         ).count()
         return students
-    
+
     def author_view(self, context=None):
         context_html = self.get_context()
         template = self.render_template(

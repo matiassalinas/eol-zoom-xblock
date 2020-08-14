@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from mock import patch, Mock,PropertyMock
+from mock import patch, Mock, PropertyMock
 from collections import namedtuple
 
 import json
@@ -32,6 +32,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 XBLOCK_RUNTIME_USER_ID = 99
+
 
 class TestRequest(object):
     # pylint: disable=too-few-public-methods
@@ -70,7 +71,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the user in
             self.client = Client()
-            self.assertTrue(self.client.login(username=uname, password=password))
+            self.assertTrue(
+    self.client.login(
+        username=uname,
+         password=password))
 
             # Create refresh_token
             self.zoom_auth = EolZoomAuth.objects.create(
@@ -730,7 +734,10 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the student in
             self.client = Client()
-            self.assertTrue(self.client.login(username=uname, password=password))
+            self.assertTrue(
+    self.client.login(
+        username=uname,
+         password=password))
 
             # Log the user staff in
             self.staff_client = Client()
@@ -918,6 +925,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             self.xblock.created_location,
             self.xblock.location._to_string())
 
+
 class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
 
@@ -943,16 +951,21 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
 
             # Log the user in
             self.client = Client()
-            self.assertTrue(self.client.login(username=uname, password=password))
-    
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_PROJECT_ID = 'test-project')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
-    @override_settings(GOOGLE_REDIRECT_URIS = ["https://studio.test.cl/zoom/callback_google_auth"])
-    @override_settings(GOOGLE_JAVASCRIPT_ORIGINS = ["https://studio.test.cl"])
+            self.assertTrue(
+    self.client.login(
+        username=uname,
+         password=password))
+
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_PROJECT_ID='test-project')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
+    @override_settings(GOOGLE_REDIRECT_URIS=[
+                       "https://studio.test.cl/zoom/callback_google_auth"])
+    @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
     def test_auth_google(self):
         """
-            Test auth_google normal process    
+            Test auth_google normal process
         """
         result = self.client.get(
             reverse('auth_google'),
@@ -961,84 +974,116 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         args = urllib.parse.parse_qs(request.query)
         self.assertEqual(request.netloc, 'accounts.google.com')
         self.assertEqual(request.path, '/o/oauth2/auth')
-        self.assertEqual(args['scope'], ["https://www.googleapis.com/auth/youtube.force-ssl"])
+        self.assertEqual(
+    args['scope'],
+     ["https://www.googleapis.com/auth/youtube.force-ssl"])
         self.assertEqual(args['access_type'][0], "offline")
         self.assertEqual(args['include_granted_scopes'][0], 'true')
         self.assertEqual(args['state'][0], "Lw==")
-        self.assertEqual(args['redirect_uri'][0], "https://testserver/zoom/callback_google_auth")
+        self.assertEqual(args['redirect_uri'][0],
+     "https://testserver/zoom/callback_google_auth")
         self.assertEqual(args['response_type'][0], "code")
-        self.assertEqual(args['client_id'][0], 'test-client-id.apps.googleusercontent.com')
-    
+        self.assertEqual(args['client_id'][0],
+     'test-client-id.apps.googleusercontent.com')
+
     def test_auth_google_post(self):
         """
-            Test auth_google if request is post   
+            Test auth_google if request is post
         """
         result = self.client.post(reverse('auth_google'),
             data={'redirect': 'Lw=='})
         self.assertEqual(result.status_code, 400)
 
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_PROJECT_ID = 'test-project')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
-    @override_settings(GOOGLE_REDIRECT_URIS = ["https://studio.test.cl/zoom/callback_google_auth"])
-    @override_settings(GOOGLE_JAVASCRIPT_ORIGINS = ["https://studio.test.cl"])
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_PROJECT_ID='test-project')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
+    @override_settings(GOOGLE_REDIRECT_URIS=[
+                       "https://studio.test.cl/zoom/callback_google_auth"])
+    @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
     @patch('eolzoom.youtube_views.check_permission_live')
     @patch('eolzoom.youtube_views.check_permission_channels')
     @patch('google_auth_oauthlib.flow.Flow.fetch_token')
     def test_callback_google_auth(self, flow, channel, live):
         """
-            Test callback_google_auth normal process    
+            Test callback_google_auth normal process
         """
         with patch('google_auth_oauthlib.flow.Flow.credentials', new_callable=PropertyMock) as mock_foo:
-            channel.return_value = {'channel':True,'livestream':False,'credentials': True}
-            live.return_value = {'channel':True,'livestream':True,'credentials': True}
-            mock_foo.return_value = namedtuple("Flow", ["token", "refresh_token", 'token_uri','scopes','expiry'])("this-is-a-token", "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI","https://www.googleapis.com/oauth2/v3/token",["https://www.googleapis.com/auth/youtube.force-ssl"],dt.now())
-            data = {'state': 'Lw==', 'code': 'asdf', 'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'}
-            self.assertFalse(EolGoogleAuth.objects.filter(user=self.user).exists())
-            result = self.client.get(reverse('callback_google_auth'), data=data)
-            self.assertTrue(EolGoogleAuth.objects.filter(user=self.user).exists())
-    
+            channel.return_value = {
+    'channel': True,
+    'livestream': False,
+     'credentials': True}
+            live.return_value = {
+    'channel': True,
+    'livestream': True,
+     'credentials': True}
+            mock_foo.return_value = namedtuple(
+    "Flow",
+    [
+        "token",
+        "refresh_token",
+        'token_uri',
+        'scopes',
+        'expiry'])(
+            "this-is-a-token",
+            "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
+            "https://www.googleapis.com/oauth2/v3/token",
+            ["https://www.googleapis.com/auth/youtube.force-ssl"],
+             dt.now())
+            data = {
+    'state': 'Lw==',
+    'code': 'asdf',
+     'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'}
+            self.assertFalse(
+    EolGoogleAuth.objects.filter(
+        user=self.user).exists())
+            result = self.client.get(
+    reverse('callback_google_auth'), data=data)
+            self.assertTrue(
+    EolGoogleAuth.objects.filter(
+        user=self.user).exists())
+
     def test_callback_google_auth_not_state(self):
         """
-            Test callback_google_auth if state params not exists   
+            Test callback_google_auth if state params not exists
         """
-        result = self.client.get(reverse('callback_google_auth'), 
+        result = self.client.get(reverse('callback_google_auth'),
             data={
-            'code': 'asdf', 
+            'code': 'asdf',
             'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'})
         self.assertEqual(result.status_code, 400)
-    
+
     def test_callback_google_auth_not_code(self):
         """
-            Test callback_google_auth if code params not exists   
+            Test callback_google_auth if code params not exists
         """
-        result = self.client.get(reverse('callback_google_auth'), 
-            data={'state': 'Lw==', 
+        result = self.client.get(reverse('callback_google_auth'),
+            data={'state': 'Lw==',
             'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'})
         self.assertEqual(result.status_code, 400)
-    
+
     def test_callback_google_auth_not_scope(self):
         """
-            Test callback_google_auth if state scope not exists   
+            Test callback_google_auth if state scope not exists
         """
-        result = self.client.get(reverse('callback_google_auth'), 
-            data={'state': 'Lw==', 
+        result = self.client.get(reverse('callback_google_auth'),
+            data={'state': 'Lw==',
             'code': 'asdf'})
         self.assertEqual(result.status_code, 400)
-    
+
     def test_callback_google_post(self):
         """
-            Test callback_google_auth if resquest is post   
+            Test callback_google_auth if resquest is post
         """
-        result = self.client.post(reverse('callback_google_auth'), 
-            data={'state': 'Lw==', 
+        result = self.client.post(reverse('callback_google_auth'),
+            data={'state': 'Lw==',
             'code': 'asdf'})
         self.assertEqual(result.status_code, 400)
-    
+
     @patch("requests.post")
     def test_google_is_logged(self, post):
         """
-            Test google_is_logged normal process  
+            Test google_is_logged normal process
         """
         response = {
             "access_token": "1/fFAGRNJru1FTz70BzhT3Zg",
@@ -1047,33 +1092,38 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             "scope": "https://www.googleapis.com/auth/youtube.force-ssl",
             "refresh_token": "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI"
             }
-        post.side_effect = [namedtuple("Request", ["status_code", "text"])(200, json.dumps(response))]
+        post.side_effect = [
+    namedtuple(
+        "Request", [
+            "status_code", "text"])(
+                200, json.dumps(response))]
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  "2020-08-06 17:59:09.103542"}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': "2020-08-06 17:59:09.103542"}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('google_is_logged'))
         aux_credential = EolGoogleAuth.objects.get(user=self.user)
         new_credentials = json.loads(aux_credential.credentials)
         data = json.loads(result.content.decode())
-        self.assertEqual(data['livestream'],False)
-        self.assertEqual(data['credentials'],True)
-        self.assertEqual(data['channel'],False)
+        self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['credentials'], True)
+        self.assertEqual(data['channel'], False)
         self.assertNotEqual(new_credentials['expiry'], credentials['expiry'])
         self.assertEqual(new_credentials['token'], '1/fFAGRNJru1FTz70BzhT3Zg')
-    
-    def test_google_is_logged_not_credentials(self): 
+
+    def test_google_is_logged_not_credentials(self):
         """
-            Test google_is_logged if credential not exists  
-        """       
+            Test google_is_logged if credential not exists
+        """
         result = self.client.get(reverse('google_is_logged'))
         data = json.loads(result.content.decode())
-        self.assertEqual(data['livestream'],False)
-        self.assertEqual(data['credentials'],False)
-        self.assertEqual(data['channel'],False)
+        self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['credentials'], False)
+        self.assertEqual(data['channel'], False)
 
     @patch("requests.post")
     def test_google_is_logged_error_refresh_token(self, post):
@@ -1087,23 +1137,28 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             "scope": "https://www.googleapis.com/auth/youtube.force-ssl",
             "refresh_token": "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI"
             }
-        post.side_effect = [namedtuple("Request", ["status_code", "text"])(400, json.dumps(response))]
+        post.side_effect = [
+    namedtuple(
+        "Request", [
+            "status_code", "text"])(
+                400, json.dumps(response))]
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  "2020-08-06 17:59:09.103542"}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': "2020-08-06 17:59:09.103542"}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('google_is_logged'))
         aux_credential = EolGoogleAuth.objects.get(user=self.user)
         new_credentials = json.loads(aux_credential.credentials)
         data = json.loads(result.content.decode())
-        self.assertEqual(data['livestream'],False)
-        self.assertEqual(data['credentials'],False)
-        self.assertEqual(data['channel'],False)
+        self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['credentials'], False)
+        self.assertEqual(data['channel'], False)
         self.assertEqual(new_credentials, credentials)
-    
+
     def test_google_is_logged_datetime_now(self):
         """
             Test google_is_logged with credentials.expiry is not expired
@@ -1115,75 +1170,92 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
             'expiry': str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('google_is_logged'))
         aux_credential = EolGoogleAuth.objects.get(user=self.user)
         new_credentials = json.loads(aux_credential.credentials)
         data = json.loads(result.content.decode())
-        self.assertEqual(data['livestream'],False)
-        self.assertEqual(data['credentials'],True)
-        self.assertEqual(data['channel'],False)
+        self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['credentials'], True)
+        self.assertEqual(data['channel'], False)
         self.assertEqual(new_credentials, credentials)
 
     @patch("requests.post")
     def test_google_is_logged_post(self, post):
         """
-            Test google_is_logged if request if post  
+            Test google_is_logged if request if post
         """
         result = self.client.post(reverse('google_is_logged'))
         self.assertEqual(result.status_code, 400)
 
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.youtube_views.check_permission_live')
     @patch('eolzoom.youtube_views.check_permission_channels')
     def test_youtube_validate(self, channel, live):
         """
-            Test youtube_validate normal process  
+            Test youtube_validate normal process
         """
-        new_expiry = dt.now() + datetime.timedelta(seconds=3600)        
-        channel.return_value = {'channel':True,'livestream':False,'credentials': True}
-        live.return_value = {'channel':True,'livestream':True,'credentials': True}
+        new_expiry = dt.now() + datetime.timedelta(seconds=3600)
+        channel.return_value = {
+    'channel': True,
+    'livestream': False,
+     'credentials': True}
+        live.return_value = {
+    'channel': True,
+    'livestream': True,
+     'credentials': True}
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('youtube_validate'))
         data = json.loads(result.content.decode())
-        self.assertEqual(data['credentials'],True)
-        self.assertEqual(data['channel'],True)
-        self.assertEqual(data['livestream'],True)
-    
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
+        self.assertEqual(data['credentials'], True)
+        self.assertEqual(data['channel'], True)
+        self.assertEqual(data['livestream'], True)
+
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.youtube_views.check_permission_live')
     @patch('eolzoom.youtube_views.check_permission_channels')
     def test_youtube_validate_not_channel_live(self, channel, live):
         """
-            Test youtube_validate if user dont have channel or live permission  
+            Test youtube_validate if user dont have channel or live permission
         """
         new_expiry = dt.now() + datetime.timedelta(seconds=3600)
-        channel.return_value = {'channel':False,'livestream':False,'credentials': True}
-        live.return_value = {'channel':False,'livestream':False,'credentials': True}
+        channel.return_value = {
+    'channel': False,
+    'livestream': False,
+     'credentials': True}
+        live.return_value = {
+    'channel': False,
+    'livestream': False,
+     'credentials': True}
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('youtube_validate'))
         data = json.loads(result.content.decode())
-        self.assertEqual(data['credentials'],True)
-        self.assertEqual(data['channel'],False)
-        self.assertEqual(data['livestream'],False)
-    
+        self.assertEqual(data['credentials'], True)
+        self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream'], False)
+
     def test_youtube_validate_wrong_token(self):
         """
-            Test youtube_validate if credentials.token is wrong 
+            Test youtube_validate if credentials.token is wrong
         """
         new_expiry = dt.now() + datetime.timedelta(seconds=3600)
         credentials = {
@@ -1191,27 +1263,29 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('youtube_validate'))
         data = json.loads(result.content.decode())
-        self.assertEqual(data['credentials'],False)
-        self.assertEqual(data['channel'],False)
-        self.assertEqual(data['livestream'],False)
-    
+        self.assertEqual(data['credentials'], False)
+        self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream'], False)
+
     def test_youtube_validate_post(self):
         """
-            Test youtube_validate if request is post  
+            Test youtube_validate if request is post
         """
         result = self.client.post(reverse('youtube_validate'))
         self.assertEqual(result.status_code, 400)
 
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.youtube_views.update_live_in_youtube')
     def test_update_livebroadcast(self, updt_yt):
         """
-            Test update_livebroadcast normal process  
+            Test update_livebroadcast normal process
         """
         new_expiry = dt.now() + datetime.timedelta(seconds=3600)
         credentials = {
@@ -1219,8 +1293,12 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials), channel_enabled=True, livebroadcast_enabled=True)
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user,
+    credentials=json.dumps(credentials),
+    channel_enabled=True,
+     livebroadcast_enabled=True)
         updt_yt.return_value = "09876"
         post_data = {
             'display_name': 'display_name',
@@ -1230,13 +1308,15 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'duration': '40',
             'broadcast_id': '09876'
         }
-        result = self.client.post(reverse('url_update_livebroadcast'), post_data)
+        result = self.client.post(
+    reverse('url_update_livebroadcast'), post_data)
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'ok')
         self.assertEqual(data['id_broadcast'], '09876')
-    
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
+
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.youtube_views.update_live_in_youtube')
     def test_update_livebroadcast_wrong_credentials(self, updt_yt):
         """
@@ -1248,8 +1328,9 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
         updt_yt.return_value = None
         post_data = {
             'display_name': 'display_name',
@@ -1259,18 +1340,19 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'duration': '40',
             'broadcast_id': '09876'
         }
-        result = self.client.post(reverse('url_update_livebroadcast'), post_data)
+        result = self.client.post(
+    reverse('url_update_livebroadcast'), post_data)
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'error')
-    
+
     def test_update_livebroadcast_no_params(self):
         """
-            Test update_livebroadcast if request dont have params  
+            Test update_livebroadcast if request dont have params
         """
         result = self.client.post(reverse('url_update_livebroadcast'))
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'error')
-    
+
     def test_update_livebroadcast_no_yt(self):
         """
             Test update_livebroadcast if fail create youtube objects
@@ -1289,15 +1371,17 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials))
-        result = self.client.post(reverse('url_update_livebroadcast'), post_data)
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user, credentials=json.dumps(credentials))
+        result = self.client.post(
+    reverse('url_update_livebroadcast'), post_data)
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'error')
 
     def test_update_livebroadcast_no_yt_no_credential(self):
         """
-            Test update_livebroadcast if creadentails is not setted 
+            Test update_livebroadcast if creadentails is not setted
         """
         post_data = {
             'display_name': 'display_name',
@@ -1306,26 +1390,28 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'time': '10:10',
             'duration': '40',
             'broadcast_id': '09876'
-        }     
-        result = self.client.post(reverse('url_update_livebroadcast'), post_data)
+        }
+        result = self.client.post(
+    reverse('url_update_livebroadcast'), post_data)
         data = json.loads(result.content.decode())
-        self.assertEqual(data['status'], 'error')    
-    
+        self.assertEqual(data['status'], 'error')
+
     def test_update_livebroadcast_get(self):
         """
-            Test update_livebroadcast if request is get  
+            Test update_livebroadcast if request is get
         """
         result = self.client.get(reverse('url_update_livebroadcast'))
         self.assertEqual(result.status_code, 400)
-    
-    @override_settings(GOOGLE_CLIENT_ID = 'test-client-id.apps.googleusercontent.com')
-    @override_settings(GOOGLE_CLIENT_SECRET = '1234567890asdfgh')
+
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.youtube_views.create_live_in_youtube')
     @patch("requests.patch")
     @patch("requests.post")
     def test_create_livebroadcast(self, post, patch, stream_dict):
         """
-            Test create_livebroadcast normal process  
+            Test create_livebroadcast normal process
         """
         new_expiry = dt.now() + datetime.timedelta(seconds=3600)
         credentials = {
@@ -1333,11 +1419,17 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
-            'expiry':  str(new_expiry)}
-        EolGoogleAuth.objects.create(user=self.user,credentials=json.dumps(credentials), channel_enabled=True, livebroadcast_enabled=True)
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
+            'expiry': str(new_expiry)}
+        EolGoogleAuth.objects.create(
+    user=self.user,
+    credentials=json.dumps(credentials),
+    channel_enabled=True,
+     livebroadcast_enabled=True)
+        EolZoomAuth.objects.create(
+    user=self.user,
+     zoom_refresh_token='test_refresh_token')
         stream_dict.return_value = {
-            "id":"09876",
+            "id": "09876",
             "stream_key": "this-is-a-stream-key",
             "stream_server": "a-stream-server",
             'broadcast_id': "12345"
@@ -1354,7 +1446,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                 "Request", [
                     "status_code", "json"])(
                 200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
         post_data = {
             'display_name': 'display_name',
             'meeting_id': '676767',
@@ -1367,15 +1459,15 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'ok')
         self.assertEqual(data['id_broadcast'], '12345')
-    
+
     def test_create_livebroadcast_no_params(self):
         """
-            Test create_livebroadcast if request dont have params  
+            Test create_livebroadcast if request dont have params
         """
         result = self.client.post(reverse('url_new_livebroadcast'))
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'error')
-    
+
     def test_create_livebroadcast_no_yt(self):
          """
             Test create_livebroadcast if fail create youtube objects

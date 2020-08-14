@@ -9,7 +9,9 @@ from django.conf import settings
 
 import requests
 import json
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import base64
 from django.views.generic.base import View
 from celery import task
@@ -190,7 +192,8 @@ def set_scheduled_meeting(request, url, api_method):
                 'join_url': data['join_url'],
                 'meeting_password': body['password']
             }
-            EolZoomMappingUserMeet.objects.create(meeting_id=data['id'], user=user)
+            EolZoomMappingUserMeet.objects.create(
+                meeting_id=data['id'], user=user)
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':
@@ -217,7 +220,8 @@ def get_access_token(user, refresh_token):
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(
+        urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
@@ -227,7 +231,7 @@ def get_access_token(user, refresh_token):
         if 'error' not in token:
             _update_auth(user, token['refresh_token'])  # Update refresh_token
         return token
-    except:
+    except BaseException:
         return {'error': 'json response error'}
 
 
@@ -253,14 +257,15 @@ def get_refresh_token(authorization_code, redirect_uri):
         'code': authorization_code,
         'redirect_uri': redirect_uri
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(
+        urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
     r = requests.post(url, headers=headers)
     try:
         return r.json()
-    except:
+    except BaseException:
         return {'error': 'json response error'}
 
 
@@ -464,10 +469,11 @@ def get_join_url(user_meeting, meeting_id, course_id, access_token):
     while i <= page_count:
         params = {
             'status': 'approved',
-            'page_size': 300, # max 300 
+            'page_size': 300,  # max 300
             'page_number': i
         }
-        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(meeting_id, urllib.parse.urlencode(params))
+        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(
+            meeting_id, urllib.parse.urlencode(params))
         r = requests.get(
             url,
             headers=headers)
@@ -477,7 +483,7 @@ def get_join_url(user_meeting, meeting_id, course_id, access_token):
             data = r.json()
             page_count = data['page_count']
             registrants.extend(data['registrants'])
-        i+= 1
+        i += 1
     return registrants
 
 
@@ -518,8 +524,7 @@ def meeting_registrant(user_meeting, meeting_id, students, access_token):
         student_info = {
             'email': student.email,
             'first_name': student.profile.name if student.profile.name != '' else student.username,
-            'last_name': platform_name.decode('utf-8')
-        }
+            'last_name': platform_name.decode('utf-8')}
         data = get_meeting_registrant(
             meeting_id, user_meeting, student_info, access_token)
         if 'registrant_id' in data and 'error' not in data:

@@ -1,7 +1,6 @@
 """Setup for eolzoom XBlock."""
 
 
-
 import os
 
 from setuptools import setup

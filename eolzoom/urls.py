@@ -38,7 +38,7 @@ urlpatterns = (
         r'^zoom/get_student_join_url',
         login_required(get_student_join_url),
         name='get_student_join_url',
-    ),    
+    ),
     url(
         r'^zoom/new_scheduled_meeting$',
         login_required(new_scheduled_meeting),

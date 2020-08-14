@@ -16,6 +16,7 @@ class EolZoomAuth(models.Model):
         related_name="eolzoom_user")
     zoom_refresh_token = models.TextField()
 
+
 class EolGoogleAuth(models.Model):
     """
         Model with user Google credentials
@@ -26,7 +27,8 @@ class EolGoogleAuth(models.Model):
         related_name="google_user")
     credentials = models.TextField()
     channel_enabled = models.BooleanField(default=False)
-    livebroadcast_enabled =models.BooleanField(default=False)
+    livebroadcast_enabled = models.BooleanField(default=False)
+
 
 class EolZoomRegistrant(models.Model):
     """
@@ -45,6 +47,7 @@ class EolZoomRegistrant(models.Model):
 
     def __str__(self):
         return '(%s) %s -> %s' % (self.meeting_id, self.email, self.join_url)
+
 
 class EolZoomMappingUserMeet(models.Model):
     """

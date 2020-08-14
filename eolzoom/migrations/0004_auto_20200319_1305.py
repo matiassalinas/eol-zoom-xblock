@@ -17,6 +17,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eolzoomauth',
             name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='eolzoom_user', to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='eolzoom_user',
+                to=settings.AUTH_USER_MODEL),
         ),
     ]

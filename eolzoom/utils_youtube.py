@@ -137,7 +137,7 @@ def create_live_in_youtube(youtube, start_time, title):
                 e.resp.status, e.content))
         return None
     except RefreshError:
-        logger.error("An error occurred with token user")
+        logger.error("An error occurred with token user in create_live_in_youtube()")
         return None
 
 

@@ -23,7 +23,7 @@ To enable [Zoom API](https://marketplace.zoom.us/docs/guides) Edit *production.p
 
 # Configuration Zoom Event
 
-To enable [Zoom API](https://marketplace.zoom.us/docs/guides/build/webhook-only-app) Edit *production.py* in *lms and cms settings* and add your own token authorization.
+To enable [Zoom Event API](https://marketplace.zoom.us/docs/guides/build/webhook-only-app) Edit *production.py* in *lms and cms settings* and add your own token authorization.
 
     EOLZOOM_EVENT_AUTHORIZATION = AUTH_TOKENS.get('EOLZOOM_EVENT_AUTHORIZATION', '')
 

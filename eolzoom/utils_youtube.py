@@ -240,7 +240,7 @@ def update_meeting_youtube(user, stream_dict, meet_id):
     }
     url = "https://api.zoom.us/v2/meetings/{}/livestream".format(meet_id)
     body = {
-        "stream_url": stream_dict["stream_server"],
+        'stream_url': 'rtmp://a.rtmp.youtube.com/live2',
         "stream_key": stream_dict["stream_key"],
         "page_url": "https://youtu.be/{}".format(stream_dict['broadcast_id'])
     }

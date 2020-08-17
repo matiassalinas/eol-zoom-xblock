@@ -47,7 +47,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         } else {
             url_meeting = settings.url_new_meeting;
         }
-        if(settings.broadcast_id) {
+        if(settings.broadcast_id != "") {
             url_livebroadcast = settings.url_update_livebroadcast
         } else {
             url_livebroadcast = settings.url_new_livebroadcast
@@ -80,44 +80,58 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     form_data.set('meeting_id', data.meeting_id);
                     form_data.set('meeting_password', data.meeting_password);
                 }
-                $.ajax({
-                    url: url_livebroadcast,
-                    dataType: 'text',
-                    cache: false,
-                    contentType: false,
-                    processData: false,
-                    data: form_data,
-                    type: "POST",
-                    success: function(response){
-                        if (response.status == "ok"){
-                            form_data.set('broadcast_id', response.id_broadcast);
-                        }
-                    }
-                });
                 if ($.isFunction(runtime.notify)) {
                     runtime.notify('save', {state: 'start'});
                 }
-                $.ajax({
-                    url: handlerUrl,
-                    dataType: 'text',
-                    cache: false,
-                    contentType: false,
-                    processData: false,
-                    data: form_data,
-                    type: "POST",
-                    success: function(response){
-                    if ($.isFunction(runtime.notify)) {
-                        runtime.notify('save', {state: 'end'});
-                    }
-                    }
-                });
+                if (google_access){
+                    $.ajax({
+                        url: url_livebroadcast,
+                        dataType: 'text',
+                        cache: false,
+                        contentType: false,
+                        processData: false,
+                        data: form_data,
+                        type: "POST",
+                        success: function(response){
+                            data_response = JSON.parse(response)
+                            if (data_response['status'] == "ok"){
+                                form_data.set('broadcast_id', data_response['id_broadcast']);
+                            }
+                            else {
+                                runtime.notify('error',  {
+                                    title: 'Error: Falló en Guardar',
+                                    message: 'Actualice la página y reintente nuevamente, si el error persiste contáctese a eol-ayuda@uchile.cl'
+                                });
+                            }
+                            save_form(form_data)
+                        }
+                    });
+                }
+                else{
+                    save_form(form_data)
+                }
             }
         });
 
         e.preventDefault();
   
     });
-
+    function save_form(form_data){
+        $.ajax({
+            url: handlerUrl,
+            dataType: 'text',
+            cache: false,
+            contentType: false,
+            processData: false,
+            data: form_data,
+            type: "POST",
+            success: function(response){
+                if ($.isFunction(runtime.notify)) {
+                    runtime.notify('save', {state: 'end'});
+                }
+            }
+        });
+    }
     $(element).find('.cancel-button').bind('click', function(e) {
       runtime.notify('cancel', {});
       e.preventDefault();

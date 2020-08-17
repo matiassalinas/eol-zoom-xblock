@@ -111,6 +111,7 @@ class EolZoomXBlock(XBlock):
     broadcast_id = String(
         display_name=_("broadcast_id"),
         scope=Scope.settings,
+        default=""
     )
     meeting_password = String(
         display_name=_("Meeting Password"),

@@ -145,7 +145,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         $('#google_access_warning').hide();
         url = settings.url_youtube_validate;
         $.get(url, function(data, status){
-            if(data.credentials) { 
+            if(data.credentials) {
+                $('#google_access').prop('disabled', false);
                 aux_msg = "Sesión Iniciada.";
                 $(element).find('input[name=youtube_permission_enabled]').val("1");
                 $(element).find('input[name=youtube_logged]').val("1");
@@ -163,6 +164,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                 $('#youtube_validate_strong').show();
             }
             else{
+                $('#google_access').prop('disabled', true);
                 actual_url = btoa(window.location.href); // encode base64
                 $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
                 $(element).find('input[name=youtube_permission_enabled]').val("0");
@@ -247,10 +249,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             /*
             * Check if user is logged at Google
             */
+           var is_logged = false
            url = settings.url_is_logged_google;
            $.get(url, function(data, status){
                 // Show submit button and form whem user is succefully logged
                 if(data.credentials) {
+                    is_logged = true
+                    $('#google_access').prop('disabled', false);
                     aux_msg = "Sesión Iniciada.";
                     $(element).find('input[name=youtube_permission_enabled]').val("1");
                     $(element).find('input[name=youtube_logged]').val("1");
@@ -268,6 +273,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     $('#youtube_validate_strong').show();
                 }
                 else{
+                    is_logged = false
+                    $('#google_access').prop('disabled', true);
                     actual_url = btoa(window.location.href); // encode base64
                     $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
                     $(element).find('input[name=youtube_permission_enabled]').val("0");
@@ -278,8 +285,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     $('#google_access_warning').show();
                 }
                 else{
-                    $('#google_access_warning').hide();
-                    $('#youtube_validate_strong').hide();
+                    if (is_logged){
+                        $('#google_access_warning').hide();
+                        $('#youtube_validate_strong').hide();  
+                    }
+                    else{
+                        $('#google_access_warning').show();
+                    }
                 }
             });
         }

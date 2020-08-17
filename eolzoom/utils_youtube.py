@@ -268,7 +268,7 @@ def check_event_zoom_params(request):
     if request.headers['Authorization'] != auth:
         logger.error("Authorization is incorrect, auth_original: {}, auth_request: {}".format(auth, request.headers['Authorization']))
         return False
-    data = json.loads(request.body)
+    data = json.loads(request.body.decode())
     if 'event' not in data or 'payload' not in data:
         logger.error("Params error, request.body: {}".format(request.body))
         return False

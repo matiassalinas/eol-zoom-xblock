@@ -1613,7 +1613,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                     "status_code", "json"])(
                 200, lambda:response), ]
         patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
-        headers={'Authorization': 'Bearer 1234567890asdfgh'}
+        headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.started",
             "payload": {
@@ -1628,7 +1628,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user)
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1653,7 +1653,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             }
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1677,7 +1677,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             }
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1689,7 +1689,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         """
             Test event_zoom_youtube if event is not 'meeting.started'
         """
-        headers={'Authorization': 'Bearer 1234567890asdfgh'}
+        headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.ended",
             "payload": {
@@ -1702,7 +1702,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             }
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1714,7 +1714,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         """
             Test event_zoom_youtube if meeting dont exists  
         """
-        headers={'Authorization': 'Bearer 1234567890asdfgh'}
+        headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.started",
             "payload": {
@@ -1728,7 +1728,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         EolZoomMappingUserMeet.objects.create(meeting_id="098765", user=self.user)
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1754,7 +1754,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                     "status_code", "json"])(
                 400, lambda:response), ]
         patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
-        headers={'Authorization': 'Bearer 1234567890asdfgh'}
+        headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.started",
             "payload": {
@@ -1769,7 +1769,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user)
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data
@@ -1796,7 +1796,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                     "status_code", "json"])(
                 200, lambda:response), ]
         patch.side_effect = [namedtuple("Request", ["status_code",])(400,), ]
-        headers={'Authorization': 'Bearer 1234567890asdfgh'}
+        headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.started",
             "payload": {
@@ -1811,7 +1811,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user)
         request = TestRequest()
         request.method = 'POST'
-        data = json.dumps(post_data)
+        data = json.dumps(post_data).encode('utf-8')
         request.body = data
         request.headers = headers
         request.params = post_data

@@ -160,7 +160,7 @@ def event_zoom_youtube(request):
     """
     if not utils_youtube.check_event_zoom_params(request):
         return HttpResponse(status=400)
-    data = json.loads(request.body)
+    data = json.loads(request.body.decode())
     id_meet = data['payload']['object']['id']
     if data['event'] == "meeting.started":
         try:

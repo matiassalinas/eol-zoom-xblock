@@ -21,6 +21,12 @@ To enable [Zoom API](https://marketplace.zoom.us/docs/guides) Edit *production.p
     EOLZOOM_AUTHORIZATION = base64.b64encode('{}:{}'.format(EOLZOOM_CLIENT_ID, EOLZOOM_CLIENT_SECRET).encode("utf-8")).decode("utf-8")
     EOLZOOM_DOMAIN = AUTH_TOKENS.get('EOLZOOM_DOMAIN', '')
 
+# Configuration Zoom Event
+
+To enable [Zoom API](https://marketplace.zoom.us/docs/guides/build/webhook-only-app) Edit *production.py* in *lms and cms settings* and add your own token authorization.
+
+    EOLZOOM_EVENT_AUTHORIZATION = AUTH_TOKENS.get('EOLZOOM_EVENT_AUTHORIZATION', '')
+
 # Configuration Youtube
 
 To enable [Youtube API](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps) Edit *production.py* in *lms and cms settings* and add your own credentials.

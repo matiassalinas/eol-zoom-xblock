@@ -261,10 +261,10 @@ def check_event_zoom_params(request):
     if request.method != "POST":
         logger.error("Request method is not POST")
         return False
-    if settings.EOLZOOM_AUTHORIZATION == "":
+    if settings.EOLZOOM_EVENT_AUTHORIZATION == "":
         logger.error("Setting EOLZOOM_AUTHORIZATION is empty")
         return False
-    auth = "Bearer {}".format(settings.EOLZOOM_AUTHORIZATION)
+    auth = "Bearer {}".format(settings.EOLZOOM_EVENT_AUTHORIZATION)
     if request.headers['Authorization'] != auth:
         logger.error("Authorization is incorrect, auth_original: {}, auth_request: {}".format(auth, request.headers['Authorization']))
         return False

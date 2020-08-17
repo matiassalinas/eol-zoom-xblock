@@ -1593,7 +1593,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = self.client.get(reverse('url_new_livebroadcast'))        
         self.assertEqual(result.status_code, 400)
     
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     @patch("requests.patch")
     @patch("requests.post")
     def test_event_zoom_youtube(self, post, patch):
@@ -1635,7 +1635,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 200)
     
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     def test_event_zoom_youtube_wrong_authorization(self):
         """
             Test event_zoom_youtube if authorization is wrong  
@@ -1684,7 +1684,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
     
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     def test_event_zoom_youtube_wrong_event(self):
         """
             Test event_zoom_youtube if event is not 'meeting.started'
@@ -1709,7 +1709,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
     
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     def test_event_zoom_youtube_meet_not_exists(self):
         """
             Test event_zoom_youtube if meeting dont exists  
@@ -1735,7 +1735,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
     
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     @patch("requests.post")
     def test_event_zoom_youtube_fail_access_token(self, post):
         """
@@ -1776,7 +1776,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
 
-    @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
     @patch("requests.patch")
     @patch("requests.post")
     def test_event_zoom_youtube_fail_start_live(self, post, patch):

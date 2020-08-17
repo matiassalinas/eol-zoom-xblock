@@ -28,7 +28,7 @@ from openedx.core.djangoapps.site_configuration import helpers as configuration_
 import httplib2
 import os
 import sys
-
+from urllib.parse import urlencode
 from apiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
 import google.oauth2.credentials
@@ -105,8 +105,7 @@ def create_client_config():
 def refresh_access_token_oauth2(refresh_token, token_uri):
     """
         Get new google token
-    """
-    from urllib.parse import urlencode
+    """    
     query = {
         'client_id': settings.GOOGLE_CLIENT_ID,
         'client_secret': settings.GOOGLE_CLIENT_SECRET,
@@ -115,8 +114,7 @@ def refresh_access_token_oauth2(refresh_token, token_uri):
     }
     response = requests.post(token_uri, params=urlencode(query))
     if response.status_code != 200:
-        logger.info('Error in refresh token')
-        logger.info(response.text)
+        logger.error('Error in refresh token, response: {}'.format(response.text))
         return None
     data = json.loads(response.text)
     return data
@@ -134,12 +132,12 @@ def create_live_in_youtube(youtube, start_time, title):
         return stream_dict
     except HttpError as e:
         # https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/insert#errors
-        logger.info(
+        logger.error(
             "An HTTP error {} occurred:\n{}".format(
                 e.resp.status, e.content))
         return None
     except RefreshError:
-        logger.info("An error occurred with token user")
+        logger.error("An error occurred with token user")
         return None
 
 
@@ -233,7 +231,7 @@ def update_meeting_youtube(user, stream_dict, meet_id):
     refresh_token = _get_refresh_token(user)
     token = get_access_token(user, refresh_token)
     if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
+        logger.error("Error get_access_token {}, meet_id: {}, user: {}".format(token['error'], meet_id, user))
         return None
     access_token = token['access_token']
     headers = {
@@ -253,7 +251,7 @@ def update_meeting_youtube(user, stream_dict, meet_id):
     if r.status_code == 204:
         return True
     else:
-        logger.info("Error in update livestream in zoom meeting")
+        logger.error("Error in update livestream in zoom meeting, meet_id: {}, user: {}".format(meet_id, user))
         return None
 
 def check_event_zoom_params(request):
@@ -261,15 +259,18 @@ def check_event_zoom_params(request):
         Verify if params of zoom event is correct
     """
     if request.method != "POST":
-        logger.info("Request method is not POST")
+        logger.error("Request method is not POST")
+        return False
+    if settings.EOLZOOM_AUTHORIZATION == "":
+        logger.error("Setting EOLZOOM_AUTHORIZATION is empty")
         return False
     auth = "Bearer {}".format(settings.EOLZOOM_AUTHORIZATION)
     if request.headers['Authorization'] != auth:
-        logger.info("Authorization is incorrect")
+        logger.error("Authorization is incorrect, auth_original: {}, auth_request: {}".format(auth, request.headers['Authorization']))
         return False
     data = json.loads(request.body)
     if 'event' not in data or 'payload' not in data:
-        logger.info("Params error")
+        logger.error("Params error, request.body: {}".format(request.body))
         return False
     return True
 
@@ -281,7 +282,7 @@ def start_live_youtube(user, meet_id):
     refresh_token = _get_refresh_token(user)
     token = get_access_token(user, refresh_token)
     if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
+        logger.error("Error get_access_token {}, user: {}, meet_id: {}".format(token['error'],user, meet_id))
         return None
     access_token = token['access_token']
     headers = {
@@ -305,7 +306,7 @@ def start_live_youtube(user, meet_id):
     if r.status_code == 204:
         response["live"] = "ok"
     else:
-        logger.info("Error to start live with zoom meeting")
+        logger.error("Error to start live with zoom meeting, user: {}, meet_id: {}".format(user, meet_id))
         response["live"] = "error to start live with zoom meeting"
     return response
 
@@ -315,7 +316,7 @@ def create_youtube_object(user):
     """
     credentials_dict, data = _get_user_credentials_google(user)
     if not data['channel'] or not data['livestream'] or credentials_dict is None:
-        logger.info("User dont have permission")
+        logger.error("User dont have youtube permission, user: {}".format(user))
         return None
 
     credentials = cretentials_dict_to_object(credentials_dict)
@@ -364,12 +365,12 @@ def check_permission_channels(youtube, data):
         if channel["pageInfo"]['totalResults'] > 0:
             data['channel'] = True
     except HttpError as e:
-        logger.info(
+        logger.debug(
             "An HTTP error {} occurred:\n{}".format(
                 e.resp.status, e.content))
     except RefreshError:
         data['credentials'] = False
-        logger.info("An error occurred with token user")
+        logger.debug("An error occurred with token user in check_permission_channels()")
     return data
 
 
@@ -384,12 +385,12 @@ def check_permission_live(youtube, data):
         delete_broadcast(youtube, id_live)
         data['livestream'] = True
     except HttpError as e:
-        logger.info(
+        logger.debug(
             "An HTTP error {} occurred:\n{}".format(
                 e.resp.status, e.content))
     except RefreshError:
         data['credentials'] = False
-        logger.info("An error occurred with token user")
+        logger.debug("An error occurred with token user in check_permission_live()")
     return data
 
 def update_live_in_youtube(youtube, start_time, title, id_live):
@@ -411,10 +412,10 @@ def update_live_in_youtube(youtube, start_time, title, id_live):
         return response["id"]
     except HttpError as e:
         # https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/insert#errors
-        logger.info(
+        logger.error(
             "An HTTP error {} occurred:\n{}".format(
                 e.resp.status, e.content))
         return None
     except RefreshError:
-        logger.info("An error occurred with token user")
+        logger.error("An error occurred with token user in update_live_in_youtube(), id_broadcast: {}".format(id_live))
         return None

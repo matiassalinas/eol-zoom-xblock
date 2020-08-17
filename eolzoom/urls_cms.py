@@ -7,6 +7,7 @@ from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_sched
 from .youtube_views import google_is_logged, auth_google, callback_google_auth, create_livebroadcast, youtube_validate, update_livebroadcast, event_zoom_youtube
 
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = (
     url(
@@ -71,7 +72,7 @@ urlpatterns = (
     ),
     url(
         r'^zoom/event_zoom_youtube',
-        event_zoom_youtube,
+        csrf_exempt(event_zoom_youtube),
         name='event_zoom_youtube',
     ),
 )

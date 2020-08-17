@@ -1660,6 +1660,30 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
     
+    def test_event_zoom_youtube_not_authorization(self):
+        """
+            Test event_zoom_youtube if authorization is empty  
+        """
+        headers={'Authorization': 'Bearer wrong1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data)
+        request.body = data
+        request.headers = headers
+        request.params = post_data
+        result = youtube_views.event_zoom_youtube(request)
+        self.assertEqual(result.status_code, 400)
+    
     @override_settings(EOLZOOM_AUTHORIZATION = '1234567890asdfgh')
     def test_event_zoom_youtube_wrong_event(self):
         """

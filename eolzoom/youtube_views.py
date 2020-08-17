@@ -50,7 +50,7 @@ def google_is_logged(request):
     """
     # check method
     if request.method != "GET":
-        logger.info("Request method is not GET")
+        logger.error("Request method is not GET")
         return HttpResponse(status=400)
     user = request.user
     credentials, data = utils_youtube._get_user_credentials_google(user)
@@ -61,6 +61,7 @@ def auth_google(request):
         Set the url to authenticate with google
     """
     if request.method != "GET":
+        logger.error("Request method is not GET")
         return HttpResponse(status=400)
     # Client configuration for an OAuth 2.0 web server application
     # (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
@@ -101,15 +102,15 @@ def callback_google_auth(request):
         Check if params is correct, get user credentials and return the redirect url
     """
     if request.method != "GET":
-        logger.info("Request method is not GET")
+        logger.error("Request method is not GET")
         return HttpResponse(status=400)
     if 'state' not in request.GET or 'code' not in request.GET or 'scope' not in request.GET:
-        logger.error("State, Code or Scope not found in request.GET")
+        logger.debug("State, Code or Scope not found in request.GET")
         return HttpResponse(status=400)
     state = request.GET.get('state')
     CLIENT_CONFIG = utils_youtube.create_client_config()
 
-    # This scope will allow the application to manage your calendars
+    # This scope will allow the application to create and remove livestreams
     SCOPES = ['https://www.googleapis.com/auth/youtube.force-ssl']
     # Use the client_secret.json file to identify the application requesting
     # authorization. The client ID (from that file) and access scopes are
@@ -134,7 +135,9 @@ def callback_google_auth(request):
         credentials = flow.credentials
     except InvalidGrantError:
         logger.error(
-            "Error with Exchange authorization code for refresh and access tokens")
+            "Error with Exchange authorization code for refresh and access tokens, User {}".format(
+                request.user
+            ))
         return HttpResponse(status=400)
     # Load credentials from the session.
     credentials_dict = {
@@ -167,9 +170,9 @@ def event_zoom_youtube(request):
                 return HttpResponse(status=400)
             return HttpResponse(status=200)
         except EolZoomMappingUserMeet.DoesNotExist:
-            logger.info("Dont exists mappig user-meeting")
+            logger.error("Dont exists mapping user-meeting, Meeting {}".format(id_meet))
             return HttpResponse(status=400)
-    logger.info("Event is not Started")
+    logger.error("Event is not Started, event: {}, id_meeting: {}".format(data['event'], id_meet))
     return HttpResponse(status=400)
 
 def create_livebroadcast(request):
@@ -178,10 +181,10 @@ def create_livebroadcast(request):
     """
     response = {'status': 'error'}
     if request.method != "POST":
-        logger.info("Request method is not POST")
+        logger.error("Request method is not POST")
         return HttpResponse(status=400)
     if 'display_name' not in request.POST or 'meeting_id' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST:
-        logger.info("Params Error")
+        logger.debug("Params Error, user: {}, request.POST: {}".format(request.user, request.POST.__dict__))
         return JsonResponse(response, safe=False)
 
     youtube = utils_youtube.create_youtube_object(request.user)
@@ -194,7 +197,7 @@ def create_livebroadcast(request):
     livebroadcast_data = utils_youtube.create_live_in_youtube(
         youtube, start_time, request.POST['display_name'])
     if livebroadcast_data is None:
-        logger.info("Error in Create live in youtube")
+        logger.error("Error in Create live in youtube, user: {}, id_meeting: {}".format(request.user, request.POST['meeting_id']))
         return JsonResponse(response, safe=False)
     status = utils_youtube.update_meeting_youtube(
         request.user,
@@ -203,7 +206,6 @@ def create_livebroadcast(request):
     if status:
         response['status'] = "ok"
         response['id_broadcast'] = livebroadcast_data['broadcast_id']
-    logger.info("Error in update livestream in zoom meeting")
     return JsonResponse(response, safe=False)
 
 def youtube_validate(request):
@@ -212,7 +214,7 @@ def youtube_validate(request):
     """
     response = {'channel': False, 'livestream': False, 'credentials': False}
     if request.method != "GET":
-        logger.info("Request method is not GET")
+        logger.error("Request method is not GET")
         return HttpResponse(status=400)
     try:
         credentials_model = EolGoogleAuth.objects.get(user=request.user)
@@ -227,7 +229,7 @@ def youtube_validate(request):
                 credentials_model.save()
                 response.update(data)
     except EolGoogleAuth.DoesNotExist:
-        logger.info("User google account dont exists in database")
+        logger.error("User google account dont exists in database, user: {}".format(request.user))
 
     return JsonResponse(response, safe=False)
 
@@ -237,10 +239,10 @@ def update_livebroadcast(request):
     """
     response = {'status': 'error'}
     if request.method != "POST":
-        logger.info("Request method is not POST")
+        logger.error("Request method is not POST")
         return HttpResponse(status=400)
     if 'display_name' not in request.POST or 'meeting_id' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'broadcast_id' not in request.POST:
-        logger.info("Params Error")
+        logger.debug("Params Error, user: {}, request.POST: {}".format(request.user, request.POST.__dict__))
         return JsonResponse(response, safe=False)
 
     youtube = utils_youtube.create_youtube_object(request.user)
@@ -258,5 +260,4 @@ def update_livebroadcast(request):
     if id_live:
         response['status'] = "ok"
         response['id_broadcast'] = id_live
-    logger.info("Error in update livestream in zoom meeting")
     return JsonResponse(response, safe=False)

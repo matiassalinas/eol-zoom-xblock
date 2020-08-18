@@ -154,8 +154,9 @@ def insert_broadcast(youtube, start_time, title):
                 scheduledStartTime=start_time
             ),
             status=dict(
-                privacyStatus="private",
-                selfDeclaredMadeForKids=False
+                privacyStatus="unlisted",
+                selfDeclaredMadeForKids=False,
+                madeForKids=False
             ),
             contentDetails=dict(
                 enableAutoStart=True,

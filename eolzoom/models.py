@@ -62,6 +62,8 @@ class EolZoomMappingUserMeet(models.Model):
         ]
     meeting_id = models.CharField(max_length=50, unique=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    broadcast_ids = models.CharField(max_length=255, default="")
+    title = models.CharField(max_length=250, default="")
 
     def __str__(self):
         return '(%s) -> %s' % (self.user.username, self.meeting_id)

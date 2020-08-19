@@ -55,6 +55,9 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         /*
         * Create or Update meeting
         */
+        if ($.isFunction(runtime.notify)) {
+            runtime.notify('save', {state: 'start'});
+        }
         $.ajax({
             url: url_meeting,
             dataType: 'text',
@@ -80,9 +83,6 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     form_data.set('meeting_id', data.meeting_id);
                     form_data.set('meeting_password', data.meeting_password);
                 }
-                if ($.isFunction(runtime.notify)) {
-                    runtime.notify('save', {state: 'start'});
-                }
                 if (google_access){
                     $.ajax({
                         url: url_livebroadcast,
@@ -96,14 +96,14 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                             data_response = JSON.parse(response)
                             if (data_response['status'] == "ok"){
                                 form_data.set('broadcast_id', data_response['id_broadcast']);
+                                save_form(form_data)
                             }
                             else {
                                 runtime.notify('error',  {
                                     title: 'Error: Falló en Guardar',
                                     message: 'Actualice la página y reintente nuevamente, si el error persiste contáctese a eol-ayuda@uchile.cl'
                                 });
-                            }
-                            save_form(form_data)
+                            }                            
                         }
                     });
                 }

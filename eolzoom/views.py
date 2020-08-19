@@ -193,7 +193,7 @@ def set_scheduled_meeting(request, url, api_method):
                 'meeting_password': body['password']
             }
             EolZoomMappingUserMeet.objects.create(
-                meeting_id=data['id'], user=user)
+                meeting_id=data['id'], user=user, title=topic)
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':
@@ -206,6 +206,8 @@ def set_scheduled_meeting(request, url, api_method):
             response = {
                 'meeting_id': meeting_id
             }
+            user_model, created = EolZoomMappingUserMeet.objects.update_or_create(
+                meeting_id=meeting_id, user=user, title=topic)
         else:
             return HttpResponse(status=r.status_code)
     return JsonResponse(response)

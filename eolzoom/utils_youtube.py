@@ -155,8 +155,7 @@ def insert_broadcast(youtube, start_time, title):
             ),
             status=dict(
                 privacyStatus="unlisted",
-                selfDeclaredMadeForKids=False,
-                madeForKids=False
+                selfDeclaredMadeForKids=False
             ),
             contentDetails=dict(
                 enableAutoStart=True,
@@ -276,7 +275,22 @@ def check_event_zoom_params(request):
     return True
 
 
-def start_live_youtube(user, meet_id):
+def start_live_youtube(user_model):
+    """
+        Verify status livebroadcast and update status livestream in zoom meeting
+    """
+    meet_id = user_model.meeting_id
+    user = user_model.user
+    check_yt = check_status_live_youtube(user_model)
+    if check_yt is None:
+        return None
+    if check_yt == False:
+        status = create_new_live(user_model)
+        if status is None:
+            return None
+    return patch_meeting_zoom_start(user, meet_id)
+
+def patch_meeting_zoom_start(user, meet_id):
     """
         Update status livestream in zoom meeting
     """
@@ -310,6 +324,58 @@ def start_live_youtube(user, meet_id):
         logger.error("Error to start live with zoom meeting, user: {}, meet_id: {}".format(user, meet_id))
         response["live"] = "error to start live with zoom meeting"
     return response
+
+def create_new_live(user_model):
+    """
+        Create new livestream in youtube and update stream data in zoom meeting
+    """
+    youtube = create_youtube_object(user_model.user)
+    title = "{} {}".format(user_model.title, str(dt.now()))
+    start_time = str(dt.now())
+    livebroadcast_data = create_live_in_youtube(
+        youtube, start_time, title)
+    if livebroadcast_data is None:
+        logger.error("Error in Create live in youtube, user: {}, id_meeting: {}".format(user_model.user, user_model.meeting_id))
+        return None
+    status = update_meeting_youtube(
+        user_model.user,
+        livebroadcast_data,
+        user_model.meeting_id)
+    if status:
+        save = save_broadcast_id(user_model.meeting_id, livebroadcast_data['broadcast_id'])
+        if save:
+            return True
+    return None
+
+def check_status_live_youtube(user_model):
+    """
+        Verify status livestream
+        ready: waiting zoom meeting
+        complete: live is complete
+        created: livebroadcast is created, strem not setted
+        live: started livebroadcast
+    """
+    list_broadcast_id = user_model.broadcast_ids.split(" ")
+    youtube = create_youtube_object(user_model.user)
+    try:
+        response = youtube.liveBroadcasts().list(
+            part="id, status",
+            id=list_broadcast_id[-1]
+        ).execute()
+        item = response['items']
+        if len(item) > 0:
+            if item[0]["status"]['lifeCycleStatus'] == "ready":
+                return True
+        return False
+    except HttpError as e:
+        # https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/insert#errors
+        logger.error(
+            "An HTTP error {} occurred:\n{}".format(
+                e.resp.status, e.content))
+        return None
+    except RefreshError:
+        logger.error("An error occurred with token user in check_status_live_youtube(), id_broadcast: {}, user:".format(list_broadcast_id[-1], user_model.user))
+        return None
 
 def create_youtube_object(user):
     """
@@ -420,3 +486,22 @@ def update_live_in_youtube(youtube, start_time, title, id_live):
     except RefreshError:
         logger.error("An error occurred with token user in update_live_in_youtube(), id_broadcast: {}".format(id_live))
         return None
+
+def save_broadcast_id(meet_id, broadcast_id):
+    """
+        Add new broadcast_id to EolZoomMappingUserMeet
+    """
+    try:
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id=meet_id)
+        if len(user_model.broadcast_ids) > 241:
+            logger.error("User have a lot of broadcast id in one meeting, Meeting {}, user: {}, broadcast_ids: {}, miss broadcast id: {}".format(meet_id, user_model.user, user_model.broadcast_ids, broadcast_id))
+            return False
+        if user_model.broadcast_ids == "":
+            user_model.broadcast_ids = broadcast_id
+        else:
+            user_model.broadcast_ids = "{} {}".format(user_model.broadcast_ids, broadcast_id)
+        user_model.save()
+        return True
+    except EolZoomMappingUserMeet.DoesNotExist:
+        logger.error("Dont exists mapping user-meeting, Meeting {}".format(meet_id))
+        return False

@@ -165,7 +165,7 @@ def event_zoom_youtube(request):
     if data['event'] == "meeting.started":
         try:
             user_model = EolZoomMappingUserMeet.objects.get(meeting_id=id_meet)
-            response = utils_youtube.start_live_youtube(user_model.user, id_meet)
+            response = utils_youtube.start_live_youtube(user_model)
             if response is None or response['live'] != 'ok':
                 return HttpResponse(status=400)
             return HttpResponse(status=200)
@@ -204,8 +204,11 @@ def create_livebroadcast(request):
         livebroadcast_data,
         request.POST['meeting_id'])
     if status:
-        response['status'] = "ok"
-        response['id_broadcast'] = livebroadcast_data['broadcast_id']
+        save = utils_youtube.save_broadcast_id(request.POST['meeting_id'], livebroadcast_data['broadcast_id'])
+        if save:
+            response['status'] = "ok"
+            response['id_broadcast'] = livebroadcast_data['broadcast_id']
+        
     return JsonResponse(response, safe=False)
 
 def youtube_validate(request):

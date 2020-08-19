@@ -317,6 +317,55 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['meeting_id'], post_data['meeting_id'])
 
     @patch("requests.post")
+    @patch("requests.patch")
+    def test_update_scheduled_meeting_user_meet_mapping_exists(self, patch, post):
+        """
+            Test update a new scheduled meeting when EolZoomMappingUserMeet already exists
+        """
+        # POST Access Token
+        access_token_response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjIwNTMxODczOTQsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDczOTQsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI2fQ.DwuqOzywRrQO2a6yp0K_6V-hR_i_mOB62flkr0_NfFdYsSqahIRRGk1GlUTQnFzHd896XDKf_FnSSvoJg_tzuQ",
+            "expires_in": 3599,
+            "scope": "user:read"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:access_token_response), ]
+
+        # Patch Updated Meeting
+        update_meeting_response = {
+        }
+        patch.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                204, lambda:update_meeting_response), ]
+
+        post_data = {
+            'display_name': 'display_name',
+            'description': 'description',
+            'date': '2020-10-10',
+            'time': '10:10',
+            'duration': '40',
+            'meeting_id': 'meeting_id',
+            'google_access': 'true',
+            'restricted_access': 'false'
+        }
+        EolZoomMappingUserMeet.objects.create(
+                meeting_id="meeting_id", user=self.user, title="topic", is_enabled=False)
+        response = self.client.post(
+            reverse('update_scheduled_meeting'), post_data)
+        data = response.json()
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id="meeting_id", user=self.user)
+        self.assertEqual(data['meeting_id'], post_data['meeting_id'])
+        self.assertEqual(user_model.is_enabled, True)
+        self.assertEqual(user_model.title, 'display_name')
+
+    @patch("requests.post")
     @patch("requests.get")
     def test_is_logged_zoom(self, get, post):
         """
@@ -1044,6 +1093,60 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             self.assertTrue(
     EolGoogleAuth.objects.filter(
         user=self.user).exists())
+
+    @override_settings(
+    GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
+    @override_settings(GOOGLE_PROJECT_ID='test-project')
+    @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
+    @override_settings(GOOGLE_REDIRECT_URIS=[
+                       "https://studio.test.cl/zoom/callback_google_auth"])
+    @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
+    @patch('eolzoom.utils_youtube.check_permission_live')
+    @patch('eolzoom.utils_youtube.check_permission_channels')
+    @patch('google_auth_oauthlib.flow.Flow.fetch_token')
+    def test_callback_google_auth_exists_user(self, flow, channel, live):
+        """
+            Test callback_google_auth normal process
+        """
+        with patch('google_auth_oauthlib.flow.Flow.credentials', new_callable=PropertyMock) as mock_foo:
+            channel.return_value = {
+                'channel': True,
+                'livestream': False,
+                'credentials': True}
+            live.return_value = {
+                'channel': True,
+                'livestream': True,
+                'credentials': True}
+            mock_foo.return_value = namedtuple(
+                "Flow",
+                [
+                    "token",
+                    "refresh_token",
+                    'token_uri',
+                    'scopes',
+                    'expiry'])(
+                        "this-is-a-token",
+                        "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
+                        "https://www.googleapis.com/oauth2/v3/token",
+                        ["https://www.googleapis.com/auth/youtube.force-ssl"],
+                        dt.now())
+            data = {
+                'state': 'Lw==',
+                'code': 'asdf',
+                'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'}
+            credentials = {
+                'token': "this-is-a-token",
+                'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
+                'token_uri': "https://www.googleapis.com/oauth2/v3/token",
+                'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
+                'expiry': "2020-08-06 17:59:09.103542"}
+            user_auth = EolGoogleAuth.objects.create(user=self.user, credentials=json.dumps(credentials))
+            self.assertFalse(user_auth.channel_enabled)
+            self.assertFalse(user_auth.livebroadcast_enabled)
+            result = self.client.get(reverse('callback_google_auth'), data=data)
+            user_auth_2 = EolGoogleAuth.objects.get(user=self.user)
+            self.assertTrue(user_auth_2.channel_enabled)
+            self.assertTrue(user_auth_2.livebroadcast_enabled)
 
     def test_callback_google_auth_not_state(self):
         """

@@ -147,11 +147,11 @@ def callback_google_auth(request):
         'scopes': credentials.scopes,
         'expiry': str(credentials.expiry)}
     data = utils_youtube.check_permission_youtube(credentials_dict)
-    credentials_model, created = EolGoogleAuth.objects.update_or_create(
+    EolGoogleAuth.objects.update_or_create(
         user=request.user,
-        credentials=json.dumps(credentials_dict),
-        channel_enabled=data['channel'],
-        livebroadcast_enabled=data['livestream'])
+        defaults={'credentials':json.dumps(credentials_dict),
+        'channel_enabled':data['channel'],
+        'livebroadcast_enabled':data['livestream']})
     return HttpResponseRedirect(next_url)
 
 def event_zoom_youtube(request):

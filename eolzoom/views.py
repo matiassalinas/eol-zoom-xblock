@@ -208,8 +208,9 @@ def set_scheduled_meeting(request, url, api_method):
                 'meeting_id': meeting_id
             }
             google_access = request.POST['google_access'] == 'true'
-            user_model, created = EolZoomMappingUserMeet.objects.update_or_create(
-                meeting_id=meeting_id, user=user, title=topic, is_enabled=google_access)
+            EolZoomMappingUserMeet.objects.update_or_create(
+                meeting_id=meeting_id, user=user,
+                defaults={'title': topic, 'is_enabled':google_access})
         else:
             return HttpResponse(status=r.status_code)
     return JsonResponse(response)

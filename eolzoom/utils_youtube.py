@@ -179,7 +179,6 @@ def delete_broadcast(youtube, id_live):
     )
     request.execute()
 
-
 def insert_stream(youtube):
     """
         Create a liveStream resource and set its title, format, and ingestion type.

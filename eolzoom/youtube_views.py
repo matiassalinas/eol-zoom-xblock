@@ -156,7 +156,7 @@ def callback_google_auth(request):
 
 def event_zoom_youtube(request):
     """
-        Start livestreams in youtube
+        Start livestreams in youtube if youtube livestrem is enabled
     """
     if not utils_youtube.check_event_zoom_params(request):
         return HttpResponse(status=400)
@@ -165,9 +165,12 @@ def event_zoom_youtube(request):
     if data['event'] == "meeting.started":
         try:
             user_model = EolZoomMappingUserMeet.objects.get(meeting_id=id_meet)
-            response = utils_youtube.start_live_youtube(user_model)
-            if response is None or response['live'] != 'ok':
-                return HttpResponse(status=400)
+            if user_model.is_enabled:
+                response = utils_youtube.start_live_youtube(user_model)
+                if response is None or response['live'] != 'ok':
+                    return HttpResponse(status=400)
+            else:
+                logger.info("User {} dont have enabled youtube livestream in Xblock, meeting_id: {}".format(user_model.user, user_model.meeting_id))
             return HttpResponse(status=200)
         except EolZoomMappingUserMeet.DoesNotExist:
             logger.error("Dont exists mapping user-meeting, Meeting {}".format(id_meet))

@@ -264,6 +264,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'date': '2020-10-10',
             'time': '10:10',
             'duration': '40',
+            'google_access': 'true',
             'restricted_access': 'false'
         }
         response = self.client.post(
@@ -307,6 +308,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'time': '10:10',
             'duration': '40',
             'meeting_id': 'meeting_id',
+            'google_access': 'true',
             'restricted_access': 'false'
         }
         response = self.client.post(
@@ -1420,7 +1422,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
             'expiry': str(new_expiry)}
-        EolZoomMappingUserMeet.objects.create(meeting_id="676767", user=self.user, title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="676767", user=self.user, title="I am a title", is_enabled=True)
         EolGoogleAuth.objects.create(
     user=self.user,
     credentials=json.dumps(credentials),
@@ -1612,7 +1614,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
             'expiry': str(new_expiry)}
         broadcast_ids = "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890"
-        EolZoomMappingUserMeet.objects.create(meeting_id="676767", user=self.user, title="I am a title", broadcast_ids=broadcast_ids)
+        EolZoomMappingUserMeet.objects.create(meeting_id="676767", user=self.user, title="I am a title", broadcast_ids=broadcast_ids, is_enabled=True)
         EolGoogleAuth.objects.create(
             user=self.user,
             credentials=json.dumps(credentials),
@@ -1686,7 +1688,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             }
         check_yt.return_value = True
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         request = TestRequest()
         request.method = 'POST'
         data = json.dumps(post_data).encode('utf-8')
@@ -1786,7 +1788,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                     }
                 }
             }
-        EolZoomMappingUserMeet.objects.create(meeting_id="098765", user=self.user)
+        EolZoomMappingUserMeet.objects.create(meeting_id="098765", user=self.user, is_enabled=True)
         request = TestRequest()
         request.method = 'POST'
         data = json.dumps(post_data).encode('utf-8')
@@ -1829,7 +1831,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                 }
             }
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user)
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=True)
         request = TestRequest()
         request.method = 'POST'
         data = json.dumps(post_data).encode('utf-8')
@@ -1873,7 +1875,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
                 }
             }
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user)
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=True)
         request = TestRequest()
         request.method = 'POST'
         data = json.dumps(post_data).encode('utf-8')
@@ -1902,7 +1904,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             Test event_zoom_youtube normal process if meeting is re open
         """
         check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
         stream_dict.return_value = {
             "id": "09876",
@@ -1944,7 +1946,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         request.headers = headers
         request.params = post_data
         result = youtube_views.event_zoom_youtube(request)
-        user_model = EolZoomMappingUserMeet.objects.get(meeting_id="1234", user=self.user)
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id="1234", user=self.user, is_enabled=True)
         self.assertEqual(result.status_code, 200)
         self.assertEqual(user_model.broadcast_ids, "youtube_id youtube_id_2")
 
@@ -1955,7 +1957,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             Test event_zoom_youtube if meeting is re open and fail in check_status_live_youtube
         """
         check_yt.return_value = None
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         headers={'Authorization': '1234567890asdfgh'}
         post_data = {
             "event": "meeting.started",
@@ -1984,7 +1986,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             Test event_zoom_youtube if meeting is re open and fail in create new live
         """
         check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
         stream_dict.return_value = None
         response = {
@@ -2024,7 +2026,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             Test event_zoom_youtube if meeting is re open and fail in update data stream in meeting
         """
         check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
         stream_dict.return_value = {
             "id": "09876",
@@ -2075,7 +2077,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             Test event_zoom_youtube if meeting is re open and fail in update status meeting
         """
         check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title")
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
         EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
         stream_dict.return_value = {
             "id": "09876",
@@ -2118,3 +2120,29 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         request.params = post_data
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    def test_event_zoom_youtube_user_not_enabled(self):
+        """
+            Test event_zoom_youtube if user not enabled youtube livestream  
+        """
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=False)
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.headers = headers
+        request.params = post_data
+        result = youtube_views.event_zoom_youtube(request)
+        self.assertEqual(result.status_code, 200)

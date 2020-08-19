@@ -19,6 +19,16 @@
             <p>IMPORTANTE: Las modificaciones realizadas a través del sitio <a href="{{ EOLZOOM_DOMAIN }}">UChile Zoom</a> no se verán reflejadas en este componente.</p>
             <p>ATENCIÓN: Sólo <strong>{{xblock.created_by}}</strong> podrá modificar este componente e iniciar la transmisión.</p>
         </div>
+        {% if xblock.google_access %}
+            <div class="alert alert-info">
+                <p>IMPORTANTE: Las modificaciones realizadas a través del sitio <a href="https://www.youtube.com/">YouTube</a> no se verán reflejadas en este componente.</p>
+                <p>Si la transmisión de zoom es cerrada por el anfitrión e iniciada nuevamente, se creará un nuevo livestream por youtube</p>
+                <p>El livestream por youtube estará disponible en el(los) siguente(s) enlace(s):</p>
+                {% for id in broadcast_id %}
+                    <p><strong><a href="{{id}}">{{id}}</a></strong></p>
+                {% endfor %}
+            </div>
+        {% endif %}
     {% endif %}
 </div>
 <div class="eolzoom_alert">

@@ -17,7 +17,6 @@ from six import text_type
 from xblock.core import XBlock
 from xblock.fields import Integer, Scope, String, DateTime, Boolean
 from xblock.fragment import Fragment
-
 from opaque_keys.edx.keys import CourseKey
 
 # Make '_' a no-op so we can scrape strings
@@ -198,6 +197,10 @@ class EolZoomXBlock(XBlock):
 
     def author_view(self, context=None):
         context_html = self.get_context()
+        if self.google_access and self.broadcast_id != "":
+            context_html['broadcast_id'] = self.get_broadcast_id()
+        else:
+            context_html['broadcast_id'] = []
         template = self.render_template(
             'static/html/author_view.html', context_html)
         frag = Fragment(template)
@@ -217,6 +220,18 @@ class EolZoomXBlock(XBlock):
         }
         frag.initialize_js('EolZoomAuthorXBlock', json_args=settings)
         return frag
+
+    def get_broadcast_id(self):
+        from .models import EolZoomMappingUserMeet
+        try:
+            user_model = EolZoomMappingUserMeet.objects.get(user=self.runtime.user_id, meeting_id=self.meeting_id)
+            if user_model.broadcast_ids == "":
+                return []
+            broadcast_ids = user_model.broadcast_ids.split(" ")
+            complete_url = ["https://youtu.be/{}".format(x) for x in broadcast_ids]
+            return complete_url
+        except EolZoomMappingUserMeet.DoesNotExist:
+            return []
 
     def get_context(self, is_lms=False):
         # Status: false (at least one attribute is empty), true (all attributes
@@ -274,7 +289,8 @@ class EolZoomXBlock(XBlock):
             is_empty(self.time) or
             is_empty(self.description) or
             is_empty(self.duration) or
-            is_empty(self.created_by)
+            is_empty(self.created_by) or
+            (self.google_access and is_empty(self.broadcast_id))
         )
 
     def check_location(self, is_lms):

@@ -1,5 +1,5 @@
 {% load i18n %}
-<div class="eolzoom_loading ui-loading">
+<div class="eolzoom_loading ui-loading" id="eolzoom_loading">
   <p><span class="spin"><span class="icon fa fa-refresh" aria-hidden="true"></span></span> <span class="copy">Cargando</span></p>
 </div>
 <div class="wrapper-comp-settings is-active editor-with-buttons eolzoom_studio" id="settings-tab">
@@ -55,6 +55,28 @@
         <input class="input setting-input" name="duration" id="duration" value={{xblock.duration}} min="0" type="number" />
       </div>
       <span class="tip setting-help">Duración de la videollamada (en minutos)</span>
+    </li>
+    <li class="field comp-setting-entry is-set">
+      <div class="wrapper-comp-setting">
+        <label class="label setting-label" for="google_access">Youtube Livestream</label>
+        <select class="input setting-input" id="google_access">
+          <option value="0" {% if not xblock.google_access %}selected{% endif %}>
+            Deshabilitado
+          </option>
+          <option value="1" {% if xblock.google_access %}selected{% endif %}>
+            Habilitado
+          </option>
+        </select>
+      </div>
+      <span class="tip setting-help">
+        <div class="eolzoom_loading ui-loading" style="box-shadow: none;" id="eolzoom_loading_youtube">
+          <p><span class="spin"><span class="icon fa fa-refresh" aria-hidden="true"></span></span> <span class="copy">Cargando</span></p>
+        </div>
+        <strong id="google_access_warning"></strong></br>
+        <strong id="youtube_validate_strong"><a id='youtube_validate' href='#' >Actualizar Permisos</a></strong>
+        <input hidden name="youtube_permission_enabled" type="text" value="0">
+        <input hidden name="youtube_logged" type="text" value="0">
+      </span>
     </li>
     <li class="field comp-setting-entry is-set">
       <div class="wrapper-comp-setting">

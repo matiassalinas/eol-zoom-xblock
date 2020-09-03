@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -15,6 +15,19 @@ class EolZoomAuth(models.Model):
         on_delete=models.CASCADE,
         related_name="eolzoom_user")
     zoom_refresh_token = models.TextField()
+
+
+class EolGoogleAuth(models.Model):
+    """
+        Model with user Google credentials
+    """
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="google_user")
+    credentials = models.TextField()
+    channel_enabled = models.BooleanField(default=False)
+    livebroadcast_enabled = models.BooleanField(default=False)
 
 
 class EolZoomRegistrant(models.Model):
@@ -34,3 +47,24 @@ class EolZoomRegistrant(models.Model):
 
     def __str__(self):
         return '(%s) %s -> %s' % (self.meeting_id, self.email, self.join_url)
+
+
+class EolZoomMappingUserMeet(models.Model):
+    """
+        Model with meeting id and host user
+    """
+    class Meta:
+        index_together = [
+            ["meeting_id", "user"],
+        ]
+        unique_together = [
+            ["meeting_id", "user"],
+        ]
+    meeting_id = models.CharField(max_length=50, unique=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    broadcast_ids = models.CharField(max_length=255, default="")
+    is_enabled = models.BooleanField(default=False)
+    title = models.CharField(max_length=250, default="")
+
+    def __str__(self):
+        return '(%s) -> %s' % (self.user.username, self.meeting_id)

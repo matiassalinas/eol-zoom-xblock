@@ -11,7 +11,7 @@ XBlock and API to integrate zoom with the Open edX LMS. Editable within Open edx
     docker-compose exec lms python manage.py lms --settings=prod.production makemigrations
     docker-compose exec lms python manage.py lms --settings=prod.production migrate
 
-# Configuration
+# Configuration Zoom
 
 To enable [Zoom API](https://marketplace.zoom.us/docs/guides) Edit *production.py* in *lms and cms settings* and add your own keys and domain url.
 
@@ -20,6 +20,22 @@ To enable [Zoom API](https://marketplace.zoom.us/docs/guides) Edit *production.p
     EOLZOOM_CLIENT_SECRET = AUTH_TOKENS.get('EOLZOOM_CLIENT_SECRET', '')
     EOLZOOM_AUTHORIZATION = base64.b64encode('{}:{}'.format(EOLZOOM_CLIENT_ID, EOLZOOM_CLIENT_SECRET).encode("utf-8")).decode("utf-8")
     EOLZOOM_DOMAIN = AUTH_TOKENS.get('EOLZOOM_DOMAIN', '')
+
+# Configuration Zoom Event
+
+To enable [Zoom Event API](https://marketplace.zoom.us/docs/guides/build/webhook-only-app) Edit *production.py* in *lms and cms settings* and add your own token authorization.
+
+    EOLZOOM_EVENT_AUTHORIZATION = AUTH_TOKENS.get('EOLZOOM_EVENT_AUTHORIZATION', '')
+
+# Configuration Youtube
+
+To enable [Youtube API](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps) Edit *production.py* in *lms and cms settings* and add your own credentials.
+
+    GOOGLE_CLIENT_ID = AUTH_TOKENS.get('GOOGLE_CLIENT_ID', '')
+    GOOGLE_PROJECT_ID = AUTH_TOKENS.get('GOOGLE_PROJECT_ID', '')
+    GOOGLE_CLIENT_SECRET = AUTH_TOKENS.get('GOOGLE_CLIENT_SECRET', '')
+    GOOGLE_REDIRECT_URIS = AUTH_TOKENS.get('GOOGLE_REDIRECT_URIS', [])
+    GOOGLE_JAVASCRIPT_ORIGINS = AUTH_TOKENS.get('GOOGLE_JAVASCRIPT_ORIGINS', [])
 
 ## TESTS
 **Prepare tests:**

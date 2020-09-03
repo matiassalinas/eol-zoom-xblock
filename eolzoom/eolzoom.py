@@ -17,10 +17,11 @@ from six import text_type
 from xblock.core import XBlock
 from xblock.fields import Integer, Scope, String, DateTime, Boolean
 from xblock.fragment import Fragment
-
 from opaque_keys.edx.keys import CourseKey
 
 # Make '_' a no-op so we can scrape strings
+
+
 def _(text): return text
 
 
@@ -65,7 +66,8 @@ class EolZoomXBlock(XBlock):
     description = String(
         display_name=_("Descripcion"),
         scope=Scope.settings,
-        help=_("Indica una breve descripcion de la videollamada")
+        help=_("Indica una breve descripcion de la videollamada"),
+        default="",
     )
 
     duration = Integer(
@@ -99,6 +101,17 @@ class EolZoomXBlock(XBlock):
         help=_("Solo estudiantes inscritos en el curso podran acceder a esta videollamada")
     )
 
+    google_access = Boolean(
+        display_name=_("Youtube Livestream"),
+        default=False,
+        scope=Scope.settings,
+        help=_("Permite transmitir la reunion de zoom por Youtube")
+    )
+    broadcast_id = String(
+        display_name=_("broadcast_id"),
+        scope=Scope.settings,
+        default=""
+    )
     meeting_password = String(
         display_name=_("Meeting Password"),
         scope=Scope.settings,
@@ -140,7 +153,8 @@ class EolZoomXBlock(XBlock):
         frag = Fragment(template)
         frag.add_css(self.resource_string("static/css/eolzoom.css"))
         frag.add_javascript(self.resource_string("static/js/src/studio.js"))
-        enrolled_students = self.get_students_count(text_type(self.scope_ids.usage_id.course_key))
+        enrolled_students = self.get_students_count(
+            text_type(self.scope_ids.usage_id.course_key))
 
         settings = {
             'meeting_id': self.meeting_id,
@@ -151,12 +165,19 @@ class EolZoomXBlock(XBlock):
             'start_url': self.start_url,
             'join_url': self.join_url,
             'restricted_access': self.restricted_access,
+            'google_access': self.google_access,
+            'url_google_auth': reverse('auth_google'),
+            'url_is_logged_google': reverse('google_is_logged'),
+            'url_youtube_validate': reverse('youtube_validate'),
+            'broadcast_id': self.broadcast_id,
             'url_is_logged_zoom': reverse('is_logged_zoom'),
             'url_login': reverse('zoom_api'),
             'url_zoom_api': '{}oauth/authorize?response_type=code&client_id={}&redirect_uri='.format(
                 DJANGO_SETTINGS.EOLZOOM_DOMAIN,
                 DJANGO_SETTINGS.EOLZOOM_CLIENT_ID),
             'url_new_meeting': reverse('new_scheduled_meeting'),
+            'url_new_livebroadcast': reverse('url_new_livebroadcast'),
+            'url_update_livebroadcast': reverse('url_update_livebroadcast'),
             'url_update_meeting': reverse('update_scheduled_meeting'),
         }
         frag.initialize_js('EolZoomStudioXBlock', json_args=settings)
@@ -173,9 +194,13 @@ class EolZoomXBlock(XBlock):
             is_active=1
         ).count()
         return students
-    
+
     def author_view(self, context=None):
         context_html = self.get_context()
+        if self.google_access and self.broadcast_id != "":
+            context_html['broadcast_id'] = self.get_broadcast_id()
+        else:
+            context_html['broadcast_id'] = []
         template = self.render_template(
             'static/html/author_view.html', context_html)
         frag = Fragment(template)
@@ -195,6 +220,18 @@ class EolZoomXBlock(XBlock):
         }
         frag.initialize_js('EolZoomAuthorXBlock', json_args=settings)
         return frag
+
+    def get_broadcast_id(self):
+        from .models import EolZoomMappingUserMeet
+        try:
+            user_model = EolZoomMappingUserMeet.objects.get(user=self.runtime.user_id, meeting_id=self.meeting_id)
+            if user_model.broadcast_ids == "":
+                return []
+            broadcast_ids = user_model.broadcast_ids.split(" ")
+            complete_url = ["https://youtu.be/{}".format(x) for x in broadcast_ids]
+            return complete_url
+        except EolZoomMappingUserMeet.DoesNotExist:
+            return []
 
     def get_context(self, is_lms=False):
         # Status: false (at least one attribute is empty), true (all attributes
@@ -231,6 +268,8 @@ class EolZoomXBlock(XBlock):
         self.start_url = request.params['start_url']
         self.join_url = request.params['join_url']
         self.restricted_access = request.params['restricted_access']
+        self.google_access = request.params['google_access']
+        self.broadcast_id = request.params['broadcast_id']
         self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
         self.edx_created_by = self._edited_by
@@ -250,7 +289,8 @@ class EolZoomXBlock(XBlock):
             is_empty(self.time) or
             is_empty(self.description) or
             is_empty(self.duration) or
-            is_empty(self.created_by)
+            is_empty(self.created_by) or
+            (self.google_access and is_empty(self.broadcast_id))
         )
 
     def check_location(self, is_lms):

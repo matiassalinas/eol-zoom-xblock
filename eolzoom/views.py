@@ -9,9 +9,11 @@ from django.conf import settings
 
 import requests
 import json
-import urllib.request, urllib.parse, urllib.error
+import urllib.request
+import urllib.parse
+import urllib.error
 import base64
-
+from django.views.generic.base import View
 from celery import task
 import time
 import threading
@@ -24,13 +26,25 @@ from functools import partial
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.utils.translation import ugettext_noop
-
-from .models import EolZoomAuth, EolZoomRegistrant
+from django.shortcuts import render
+from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from opaque_keys.edx.keys import CourseKey
 from six import text_type
 
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
 
+import httplib2
+import os
+import sys
+
+from apiclient.errors import HttpError
+
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+import googleapiclient.discovery
+from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
+from datetime import datetime as dt
+import datetime
 import random
 import string
 
@@ -92,7 +106,7 @@ def new_scheduled_meeting(request):
     # check method and params
     if request.method != "POST":
         return HttpResponse(status=400)
-    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST:
+    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
         return HttpResponse(status=400)
 
     user_id = 'me'
@@ -109,7 +123,7 @@ def update_scheduled_meeting(request):
     # check method and params
     if request.method != "POST":
         return HttpResponse(status=400)
-    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'meeting_id' not in request.POST or 'restricted_access' not in request.POST:
+    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'meeting_id' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
         return HttpResponse(status=400)
 
     meeting_id = request.POST['meeting_id']
@@ -178,6 +192,9 @@ def set_scheduled_meeting(request, url, api_method):
                 'join_url': data['join_url'],
                 'meeting_password': body['password']
             }
+            google_access = request.POST['google_access'] == 'true'
+            EolZoomMappingUserMeet.objects.create(
+                meeting_id=data['id'], user=user, title=topic, is_enabled=google_access)
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':
@@ -190,6 +207,10 @@ def set_scheduled_meeting(request, url, api_method):
             response = {
                 'meeting_id': meeting_id
             }
+            google_access = request.POST['google_access'] == 'true'
+            EolZoomMappingUserMeet.objects.update_or_create(
+                meeting_id=meeting_id, user=user,
+                defaults={'title': topic, 'is_enabled':google_access})
         else:
             return HttpResponse(status=r.status_code)
     return JsonResponse(response)
@@ -204,7 +225,8 @@ def get_access_token(user, refresh_token):
         'grant_type': 'refresh_token',
         'refresh_token': refresh_token
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(
+        urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
@@ -214,7 +236,7 @@ def get_access_token(user, refresh_token):
         if 'error' not in token:
             _update_auth(user, token['refresh_token'])  # Update refresh_token
         return token
-    except:
+    except BaseException:
         return {'error': 'json response error'}
 
 
@@ -240,14 +262,15 @@ def get_refresh_token(authorization_code, redirect_uri):
         'code': authorization_code,
         'redirect_uri': redirect_uri
     }
-    url = 'https://zoom.us/oauth/token?{}'.format(urllib.parse.urlencode(params))
+    url = 'https://zoom.us/oauth/token?{}'.format(
+        urllib.parse.urlencode(params))
     headers = {
         'Authorization': 'Basic {}'.format(settings.EOLZOOM_AUTHORIZATION)
     }
     r = requests.post(url, headers=headers)
     try:
         return r.json()
-    except:
+    except BaseException:
         return {'error': 'json response error'}
 
 
@@ -451,10 +474,11 @@ def get_join_url(user_meeting, meeting_id, course_id, access_token):
     while i <= page_count:
         params = {
             'status': 'approved',
-            'page_size': 300, # max 300 
+            'page_size': 300,  # max 300
             'page_number': i
         }
-        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(meeting_id, urllib.parse.urlencode(params))
+        url = "https://api.zoom.us/v2/meetings/{}/registrants?{}".format(
+            meeting_id, urllib.parse.urlencode(params))
         r = requests.get(
             url,
             headers=headers)
@@ -464,7 +488,7 @@ def get_join_url(user_meeting, meeting_id, course_id, access_token):
             data = r.json()
             page_count = data['page_count']
             registrants.extend(data['registrants'])
-        i+= 1
+        i += 1
     return registrants
 
 
@@ -505,8 +529,7 @@ def meeting_registrant(user_meeting, meeting_id, students, access_token):
         student_info = {
             'email': student.email,
             'first_name': student.profile.name if student.profile.name != '' else student.username,
-            'last_name': platform_name.decode('utf-8')
-        }
+            'last_name': platform_name.decode('utf-8')}
         data = get_meeting_registrant(
             meeting_id, user_meeting, student_info, access_token)
         if 'registrant_id' in data and 'error' not in data:

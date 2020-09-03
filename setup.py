@@ -1,7 +1,6 @@
 """Setup for eolzoom XBlock."""
 
 
-
 import os
 
 from setuptools import setup
@@ -33,7 +32,10 @@ setup(
     ],
     install_requires=[
         'XBlock',
-    ],
+        "google-api-python-client>=1.10.0",
+        "google-auth>=1.16.0",
+        "google-auth-httplib2>=0.0.3",
+        "google-auth-oauthlib>=0.4.1"],
     entry_points={
         'xblock.v1': [
             'eolzoom = eolzoom:EolZoomXBlock',

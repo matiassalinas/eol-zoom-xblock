@@ -74,7 +74,7 @@ def zoom_api(request):
         'utf-8')  # decode Studio EOL URL
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
-
+    redirect_uri = redirect_uri.replace('http', 'https')
     token = get_refresh_token(authorization_code, redirect_uri)
     if 'error' in token:
         logger.error("Error get_refresh_token {}".format(token['error']))
@@ -355,6 +355,7 @@ def start_meeting(request):
     args = json.loads(data.decode("utf-8"))
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
+    redirect_uri = redirect_uri.replace('http', 'https')
     token = get_refresh_token(authorization_code, redirect_uri)
     if 'error' in token:
         logger.error("Error get_refresh_token {}".format(token['error']))

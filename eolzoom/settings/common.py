@@ -13,3 +13,4 @@ def plugin_settings(settings):
     settings.GOOGLE_CLIENT_SECRET = ''
     settings.GOOGLE_REDIRECT_URIS = []
     settings.GOOGLE_JAVASCRIPT_ORIGINS = []
+    settings.EOLZOOM_YOUTUBE_TIMEZONE = ''

@@ -193,9 +193,10 @@ def create_livebroadcast(request):
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
         return JsonResponse(response, safe=False)
-    start_time = '{}T{}:00-04:00'.format(
+    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '-04:00' # yyyy-mm-ddTHH:mm:ss-04:00
+    start_time = '{}T{}:00{}'.format(
         request.POST['date'],
-        request.POST['time'])  # yyyy-mm-ddTHH:mm:ss-04:00
+        request.POST['time'], yt_timezone)
 
     livebroadcast_data = utils_youtube.create_live_in_youtube(
         youtube, start_time, request.POST['display_name'])
@@ -254,9 +255,10 @@ def update_livebroadcast(request):
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
         return JsonResponse(response, safe=False)
-    start_time = '{}T{}:00-04:00'.format(
+    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '-04:00' # yyyy-mm-ddTHH:mm:ss-04:00
+    start_time = '{}T{}:00{}'.format(
         request.POST['date'],
-        request.POST['time'])  # yyyy-mm-ddTHH:mm:ss-04:00
+        request.POST['time'], yt_timezone) 
 
     id_live = utils_youtube.update_live_in_youtube(
         youtube,

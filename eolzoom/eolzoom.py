@@ -287,7 +287,7 @@ class EolZoomXBlock(XBlock):
             is_empty(self.meeting_id) or
             is_empty(self.date) or
             is_empty(self.time) or
-            is_empty(self.description) or
+            #is_empty(self.description) or
             is_empty(self.duration) or
             is_empty(self.created_by) or
             (self.google_access and is_empty(self.broadcast_id))

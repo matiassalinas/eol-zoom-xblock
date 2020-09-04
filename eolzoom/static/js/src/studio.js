@@ -18,7 +18,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var google_access = $(element).find('#google_access').val();
         var youtube_permission_enabled = $(element).find('input[name=youtube_permission_enabled]').val();
         google_access = google_access == '1';
-        if(display_name == "" || description == "" || date == "" || time == "" || duration < 0 || duration == "") {
+        if(display_name == "" || date == "" || time == "" || duration < 0 || duration == "") {
             alert("Datos inválidos. Revisa nuevamente la información ingresada");
             e.preventDefault();
             return;

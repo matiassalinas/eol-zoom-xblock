@@ -6,12 +6,16 @@ function EolZoomXBlock(runtime, element, settings) {
             start_meeting_api_url();
             $(element).find('.eolzoom_block .join_meeting-btn').attr('href', '#');
             $(element).find('.eolzoom_block .join_meeting-btn').click(join_meeting_api_url);
+        } else {
+            $(element).find('.eolzoom_block .start_meeting-btn').attr('href', settings.url_start_public_meeting);
         }
+
         function start_meeting_api_url() {
             // send json encoded base 64
             args = {
                 'meeting_id' : settings.meeting_id,
-                'course_id' : settings.course_id
+                'course_id' : settings.course_id,
+                'block_id' : settings.location
             }
             data = JSON.stringify(args)
             redirect_uri = encodeURIComponent(window.location.protocol + "//" + window.location.hostname + settings.url_start_meeting)+ "?data=" + btoa(data);

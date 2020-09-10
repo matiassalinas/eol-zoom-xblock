@@ -135,6 +135,14 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
+            'location' : self.location,
+            'url_start_public_meeting':reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'block_id': self.location,
+                        'meeting_id': self.meeting_id
+                    }
+            ),
             'url_start_meeting': reverse('start_meeting'),
             'get_student_join_url': reverse('get_student_join_url'),
             'restricted_access': self.restricted_access,
@@ -181,19 +189,7 @@ class EolZoomXBlock(XBlock):
             'url_update_meeting': reverse('update_scheduled_meeting'),
         }
         frag.initialize_js('EolZoomStudioXBlock', json_args=settings)
-        return frag
-
-    def get_students_count(self, course_id):
-        """
-        Get a count of all students enrolled to course
-        """
-        from student.models import CourseEnrollment
-        course_key = CourseKey.from_string(course_id)
-        students = CourseEnrollment.objects.filter(
-            course_id=course_key,
-            is_active=1
-        ).count()
-        return students
+        return frag 
 
     def author_view(self, context=None):
         context_html = self.get_context()
@@ -211,6 +207,14 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
+            'location' : self.location,
+            'url_start_public_meeting':reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'block_id': self.location,
+                        'meeting_id': self.meeting_id
+                    }
+            ),
             'url_start_meeting': reverse('start_meeting'),
             'get_student_join_url': reverse('get_student_join_url'),
             'restricted_access': self.restricted_access,
@@ -221,6 +225,18 @@ class EolZoomXBlock(XBlock):
         frag.initialize_js('EolZoomAuthorXBlock', json_args=settings)
         return frag
 
+    def get_students_count(self, course_id):
+        """
+        Get a count of all students enrolled to course
+        """
+        from student.models import CourseEnrollment
+        course_key = CourseKey.from_string(course_id)
+        students = CourseEnrollment.objects.filter(
+            course_id=course_key,
+            is_active=1
+        ).count()
+        return students
+    
     def get_broadcast_id(self):
         from .models import EolZoomMappingUserMeet
         try:

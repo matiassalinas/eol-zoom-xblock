@@ -3,7 +3,7 @@
 from django.conf.urls import url
 from django.conf import settings
 
-from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting, start_meeting, get_student_join_url
+from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting, start_meeting, start_public_meeting, get_student_join_url
 from .youtube_views import google_is_logged, auth_google, callback_google_auth, create_livebroadcast, youtube_validate, update_livebroadcast, event_zoom_youtube
 
 from django.contrib.auth.decorators import login_required
@@ -54,6 +54,11 @@ urlpatterns = (
         r'^zoom/start_meeting',
         login_required(start_meeting),
         name='start_meeting',
+    ),
+    url(
+        r'^zoom/start_public_meeting/(?P<block_id>.*)/(?P<meeting_id>.*)$',
+        login_required(start_public_meeting),
+        name='start_public_meeting',
     ),
     url(
         r'^zoom/get_student_join_url',

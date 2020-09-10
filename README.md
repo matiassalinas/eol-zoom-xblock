@@ -41,7 +41,7 @@ To enable [Youtube API](https://developers.google.com/youtube/v3/guides/auth/ser
 **Prepare tests:**
 
     > cd .github/
-    > docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
+    > docker-compose run --rm lms /openedx/requirements/eolzoom/.github/test.sh
 
 # Screenshots
 *Last Update 26/03/2020*

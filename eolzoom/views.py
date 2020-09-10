@@ -27,8 +27,9 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.utils.translation import ugettext_noop
 from django.shortcuts import render
+from .email_tasks import meeting_start_email
 from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
-from opaque_keys.edx.keys import CourseKey
+from opaque_keys.edx.keys import CourseKey, UsageKey
 from six import text_type
 
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
@@ -366,13 +367,31 @@ def start_meeting(request):
             request,
             request.user,
             args['meeting_id'],
-            args['course_id'])
+            args['course_id'],
+            args['block_id'])
     except AlreadyRunningError:
         pass
     return HttpResponseRedirect(create_start_url(args['meeting_id']))
 
+def start_public_meeting(request, block_id, meeting_id):
+    """
+        Start a meeting WITHOUT registrants
+        It will send an email to all enrolled students and redirect the meeting host to Zoom
+    """
+    # check method and params
+    if request.method != "GET":
+        return HttpResponse(status=400)
 
-def task_register_meeting_users(request, user_meeting, meeting_id, course_id):
+    usage_key = UsageKey.from_string(block_id)
+    course_id = usage_key.course_key
+    enrolled_students = get_students(request.user, text_type(course_id))
+    for student in enrolled_students:
+        meeting_start_email.delay(block_id, student.email)
+
+    return HttpResponseRedirect(create_start_url(meeting_id))
+
+
+def task_register_meeting_users(request, user_meeting, meeting_id, course_id, block_id):
     """
         Task Configurations
     """
@@ -382,7 +401,8 @@ def task_register_meeting_users(request, user_meeting, meeting_id, course_id):
     task_input = {
         'user_meeting_id': user_meeting.id,
         'meeting_id': meeting_id,
-        'course_id': course_id}
+        'course_id': course_id,
+        'block_id': block_id}
     task_key = meeting_id
     return submit_task(
         request,
@@ -415,6 +435,7 @@ def register_meeting_users(
     user_meeting_id = task_input["user_meeting_id"]
     user_meeting = User.objects.get(id=user_meeting_id)
     meeting_id = task_input["meeting_id"]
+    block_id = task_input["block_id"]
 
     refresh_token = _get_refresh_token(user_meeting)
     token = get_access_token(user_meeting, refresh_token)
@@ -444,11 +465,11 @@ def register_meeting_users(
         meeting_id,
         text_type(course_id),
         access_token)
-    _submit_join_url(registrants, meeting_id)
+    _submit_join_url(registrants, meeting_id, block_id)
     logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
 
 
-def _submit_join_url(registrants, meeting_id):
+def _submit_join_url(registrants, meeting_id, block_id):
     """
         Create EolZoomRegistrant with student join_url
     """
@@ -459,6 +480,8 @@ def _submit_join_url(registrants, meeting_id):
             email=student['email'],
             join_url=student['join_url']
         )
+        # send_mail
+        meeting_start_email.delay(block_id, student['email'])
 
 
 def get_join_url(user_meeting, meeting_id, course_id, access_token):

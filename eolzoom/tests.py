@@ -24,7 +24,7 @@ from .eolzoom import EolZoomXBlock
 from six import text_type
 import urllib.parse
 from urllib.parse import parse_qs
-from . import views, youtube_views, utils_youtube
+from . import views, youtube_views, utils_youtube, email_tasks
 from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from datetime import datetime as dt
 import datetime
@@ -55,6 +55,9 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         self.course = CourseFactory.create(org='mss', course='999',
                                            display_name='eolzoom tests')
 
+        # asign a real block id
+        self.block_id = 'block-v1:eol+prueba03+2020+type@eolzoom+block@c2c4dbfbf3974981a1e8f16187e01328'
+
         # Patch the comment client user save method so it does not try
         # to create a new cc user when creating a django user
         with patch('student.models.cc.User.save'):
@@ -72,9 +75,11 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             # Log the user in
             self.client = Client()
             self.assertTrue(
-    self.client.login(
-        username=uname,
-         password=password))
+                self.client.login(
+                    username=uname,
+                    password=password
+                )
+            )
 
             # Create refresh_token
             self.zoom_auth = EolZoomAuth.objects.create(
@@ -572,7 +577,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         """
         students = []
         meeting_id = 'meeting_id'
-        views._submit_join_url(students, meeting_id)
+        views._submit_join_url(students, meeting_id, self.block_id)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 0)
 
@@ -594,11 +599,11 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 'join_url': "join_url_4"
             },
         ]
-        views._submit_join_url(students, meeting_id)
+        views._submit_join_url(students, meeting_id, self.block_id)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 4)
 
-        views._submit_join_url(students, meeting_id)
+        views._submit_join_url(students, meeting_id, self.block_id)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 4)
 
@@ -683,13 +688,26 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         }]
         data = {
             "meeting_id": "meeting_id",
-            "course_id": text_type(self.course.id)
+            "course_id": text_type(self.course.id),
+            "block_id": self.block_id
         }
         get_data = {
             "code": "code",
             "data": base64.b64encode(json.dumps(data).encode("utf-8"))
         }
         response = self.client.get(reverse('start_meeting'), get_data)
+        self.assertEqual(response.status_code, 302)
+
+    def test_start_public_meeting(self):
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'block_id': self.block_id,
+                        'meeting_id': "meeting_id"
+                    }
+            )
+        )
         self.assertEqual(response.status_code, 302)
 
     def test_get_student_join_url(self):
@@ -754,7 +772,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         super(TestEolZoomXBlock, self).setUp()
 
         # create a course
-        self.course = CourseFactory.create(org='mss', course='999',
+        self.course = CourseFactory.create(org='mss', course='998',
                                            display_name='eolzoom tests')
 
         # create eolzoom Xblock
@@ -976,6 +994,49 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             self.xblock.created_location,
             self.xblock.location._to_string())
 
+class TestEmailTask(UrlResetMixin, ModuleStoreTestCase):
+    def setUp(self):
+
+        super(TestEmailTask, self).setUp()
+
+        # create a course
+        self.course = CourseFactory.create(org='mss', course='996',
+                                           display_name='eolzoom tests')
+
+        # asign a real block id
+        self.block_id = 'block-v1:eol+prueba03+2020+type@eolzoom+block@c2c4dbfbf3974981a1e8f16187e01328'
+
+        # Patch the comment client user save method so it does not try
+        # to create a new cc user when creating a django user
+        with patch('student.models.cc.User.save'):
+            uname = 'student'
+            email = 'student@edx.org'
+            password = 'test'
+
+            # Create the user
+            self.user = UserFactory(
+                username=uname, password=password, email=email)
+            CourseEnrollmentFactory(
+                user=self.user,
+                course_id=self.course.id)
+
+            # Log the user in
+            self.client = Client()
+            self.assertTrue(
+                self.client.login(
+                    username=uname,
+                    password=password
+                )
+            )
+    @patch('eolzoom.email_tasks.get_course_by_id')
+    def test_meeting_start_email(self, get_course_by_id):
+        """
+            Test send email
+        """
+        get_course_by_id.side_effect = namedtuple("Course", ["data"])(Mock(display_name_with_default='display_name_with_default'))
+        email = email_tasks.meeting_start_email(self.block_id, "test@test.test")
+        self.assertEqual(email, 1)
+
 
 class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
@@ -983,7 +1044,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         super(TestEolYouTubeAPI, self).setUp()
 
         # create a course
-        self.course = CourseFactory.create(org='mss', course='999',
+        self.course = CourseFactory.create(org='mss', course='997',
                                            display_name='eolzoom tests')
 
         # Patch the comment client user save method so it does not try

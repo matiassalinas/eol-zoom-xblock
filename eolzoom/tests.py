@@ -874,7 +874,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.start_url, None)
         self.assertEqual(self.xblock.join_url, None)
         self.assertEqual(self.xblock.restricted_access, False)
-        self.assertEqual(self.xblock.email_notification, True)
+        self.assertEqual(self.xblock.email_notification, False)
 
     def test_student_view_without_configuration(self):
         """

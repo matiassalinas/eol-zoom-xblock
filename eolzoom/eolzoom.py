@@ -103,7 +103,7 @@ class EolZoomXBlock(XBlock):
 
     email_notification = Boolean(
         display_name=_("Notificación por Correo"),
-        default=True,
+        default=False,
         scope=Scope.settings,
         help=_("Los estudiantes recibirán una notificación por correo electrónico al iniciar la transmisión.")
     )

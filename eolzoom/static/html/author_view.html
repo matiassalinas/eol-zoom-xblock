@@ -7,15 +7,16 @@
     {% else %}
         <div class="alert alert-success">
             <p>El componente ya está configurado.</p>
-                {% if xblock.restricted_access %}
-                <p style="font-weight: bold;">
-                    - La transmisión tiene acceso restringido. Cuando el anfitrión presione el botón <u>INICIAR TRANSMISIÓN</u> todos los usuarios inscritos en el curso podrán ingresar a la sala de videollamada.
-                </p>
-                {% endif %}
+            {% if xblock.restricted_access %}
+            <p style="font-weight: bold;">
+                - La transmisión tiene acceso restringido. Cuando el anfitrión presione el botón <u>INICIAR TRANSMISIÓN</u> todos los usuarios inscritos en el curso podrán ingresar a la sala de videollamada.
+            </p>
+            {% endif %}
+            {% if xblock.email_notification %}
             <p>
                 - Al iniciar la transmisión los estudiantes recibirán una notificación en su correo electrónico.
             </p>
-            
+            {% endif %}
             <p>El anfitrión de la transmisión es: <strong>{{xblock.created_by}}</strong>.</p>
         </div>
         <div class="alert alert-info">

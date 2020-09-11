@@ -98,7 +98,14 @@ class EolZoomXBlock(XBlock):
         display_name=_("Acceso restringido"),
         default=False,
         scope=Scope.settings,
-        help=_("Solo estudiantes inscritos en el curso podran acceder a esta videollamada")
+        help=_("Solo estudiantes inscritos en el curso podran acceder a esta videollamada.")
+    )
+
+    email_notification = Boolean(
+        display_name=_("Notificación por Correo"),
+        default=True,
+        scope=Scope.settings,
+        help=_("Los estudiantes recibirán una notificación por correo electrónico al iniciar la transmisión.")
     )
 
     google_access = Boolean(
@@ -135,11 +142,11 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
-            'location' : self.location,
+            'location' : self.location if self.email_notification else None,
             'url_start_public_meeting':reverse(
                 'start_public_meeting',
                     kwargs={
-                        'block_id': self.location,
+                        'block_id': self.location if self.email_notification else None,
                         'meeting_id': self.meeting_id
                     }
             ),
@@ -207,11 +214,11 @@ class EolZoomXBlock(XBlock):
             'meeting_id': self.meeting_id,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
-            'location' : self.location,
+            'location' : self.location if self.email_notification else None,
             'url_start_public_meeting':reverse(
                 'start_public_meeting',
                     kwargs={
-                        'block_id': self.location,
+                        'block_id': self.location if self.email_notification else None,
                         'meeting_id': self.meeting_id
                     }
             ),
@@ -284,6 +291,7 @@ class EolZoomXBlock(XBlock):
         self.start_url = request.params['start_url']
         self.join_url = request.params['join_url']
         self.restricted_access = request.params['restricted_access']
+        self.email_notification = request.params['email_notification']
         self.google_access = request.params['google_access']
         self.broadcast_id = request.params['broadcast_id']
         self.meeting_password = request.params['meeting_password']

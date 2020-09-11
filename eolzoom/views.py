@@ -381,12 +381,13 @@ def start_public_meeting(request, block_id, meeting_id):
     # check method and params
     if request.method != "GET":
         return HttpResponse(status=400)
-
-    usage_key = UsageKey.from_string(block_id)
-    course_id = usage_key.course_key
-    enrolled_students = get_students(request.user, text_type(course_id))
-    for student in enrolled_students:
-        meeting_start_email.delay(block_id, student.email)
+    # block_id will be "None" if xblock.email_notification is False
+    if block_id != "None":
+        usage_key = UsageKey.from_string(block_id)
+        course_id = usage_key.course_key
+        enrolled_students = get_students(request.user, text_type(course_id))
+        for student in enrolled_students:
+            meeting_start_email.delay(block_id, student.email)
 
     return HttpResponseRedirect(create_start_url(meeting_id))
 
@@ -481,7 +482,9 @@ def _submit_join_url(registrants, meeting_id, block_id):
             join_url=student['join_url']
         )
         # send_mail
-        meeting_start_email.delay(block_id, student['email'])
+        # block_id will be "None" if xblock.email_notification is False
+        if block_id != "None":
+            meeting_start_email.delay(block_id, student['email'])
 
 
 def get_join_url(user_meeting, meeting_id, course_id, access_token):

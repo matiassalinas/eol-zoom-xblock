@@ -90,9 +90,24 @@
           </option>
         </select>
       </div>
-      <span class="tip setting-help"><strong id="restricted_access_warning"></strong></span>
       <span class="tip setting-help">Solo estudiantes inscritos en el curso podran acceder a esta videollamada (al crear una videollamada con esta opción habilitada, no se podrá deshabilitar en un futuro). </span>
+      <span class="tip setting-help"><strong id="restricted_access_warning"></strong></span>
+      
    </li>
+   <li class="field comp-setting-entry is-set">
+    <div class="wrapper-comp-setting">
+      <label class="label setting-label" for="email_notification">Notificación por Correo</label>
+      <select class="input setting-input" id="email_notification">
+        <option value="1" {% if xblock.email_notification %}selected{% endif %}>
+          Habilitado
+        </option>
+        <option value="0" {% if not xblock.email_notification %}selected{% endif %}>
+          Deshabilitado
+        </option>
+      </select>
+    </div>
+    <span class="tip setting-help">Los estudiantes recibirán una notificación por correo electrónico al iniciar la transmisión. </span>
+ </li>
   </ul>
   <div class="xblock-actions">
     <ul>

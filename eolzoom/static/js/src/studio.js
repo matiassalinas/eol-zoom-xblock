@@ -14,7 +14,9 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         var duration = $(element).find('input[name=duration]').val();
         var created_by = $(element).find('#created_by').text();
         var restricted_access = $(element).find('#restricted_access').val();
+        var email_notification = $(element).find('#email_notification').val();
         restricted_access = restricted_access == '1';
+        email_notification = email_notification == '1';
         var google_access = $(element).find('#google_access').val();
         var youtube_permission_enabled = $(element).find('input[name=youtube_permission_enabled]').val();
         google_access = google_access == '1';
@@ -37,6 +39,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('meeting_id', settings.meeting_id);
         form_data.append('broadcast_id', settings.broadcast_id);
         form_data.append('restricted_access', restricted_access);
+        form_data.append('email_notification', email_notification);
         form_data.append('google_access', google_access);
 
         /*

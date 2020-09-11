@@ -699,6 +699,34 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_start_public_meeting(self):
+        """
+            Test start public meeting
+            1. With block_id (email_notification is True)
+            2. With block_id None (email_notification is False)
+        """
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'block_id': self.block_id,
+                        'meeting_id': "meeting_id"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'block_id': "None",
+                        'meeting_id': "meeting_id"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+
+
         response = self.client.get(
             reverse(
                 'start_public_meeting',
@@ -845,6 +873,8 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.created_location, None)
         self.assertEqual(self.xblock.start_url, None)
         self.assertEqual(self.xblock.join_url, None)
+        self.assertEqual(self.xblock.restricted_access, False)
+        self.assertEqual(self.xblock.email_notification, True)
 
     def test_student_view_without_configuration(self):
         """
@@ -971,6 +1001,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
             'start_url': 'start_url_example',
             'join_url': 'join_url_example',
             'restricted_access': False,
+            'email_notification': True,
             'meeting_password': 'meeting_password',
             'google_access': False,
             'broadcast_id': 'new_live_yt',
@@ -989,6 +1020,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(self.xblock.join_url, 'join_url_example')
         self.assertEqual(self.xblock.meeting_password, 'meeting_password')
         self.assertEqual(self.xblock.restricted_access, False)
+        self.assertEqual(self.xblock.email_notification, True)
         self.assertEqual(self.xblock.created_by, self.staff_user.email)
         self.assertEqual(
             self.xblock.created_location,

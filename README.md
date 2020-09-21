@@ -29,13 +29,14 @@ To enable [Zoom Event API](https://marketplace.zoom.us/docs/guides/build/webhook
 
 # Configuration Youtube
 
-To enable [Youtube API](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps) Edit *production.py* in *lms and cms settings* and add your own credentials.
+To enable [Youtube API](https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps) Edit *production.py* in *lms and cms settings* and add your own credentials and timezone.
 
     GOOGLE_CLIENT_ID = AUTH_TOKENS.get('GOOGLE_CLIENT_ID', '')
     GOOGLE_PROJECT_ID = AUTH_TOKENS.get('GOOGLE_PROJECT_ID', '')
     GOOGLE_CLIENT_SECRET = AUTH_TOKENS.get('GOOGLE_CLIENT_SECRET', '')
     GOOGLE_REDIRECT_URIS = AUTH_TOKENS.get('GOOGLE_REDIRECT_URIS', [])
     GOOGLE_JAVASCRIPT_ORIGINS = AUTH_TOKENS.get('GOOGLE_JAVASCRIPT_ORIGINS', [])
+    EOLZOOM_YOUTUBE_TIMEZONE = AUTH_TOKENS.get('EOLZOOM_YOUTUBE_TIMEZONE', '')
 
 ## TESTS
 **Prepare tests:**

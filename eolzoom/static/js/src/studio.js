@@ -144,26 +144,27 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         //0: disabled
         //1: enabled
         if($(this).find(":selected").val()=="1"){
-            $('#google_access_warning').show();
+            $(element).find('#google_access_warning').show();
             if ($(element).find('input[name=youtube_logged]').val() == "0"){
-                $('#youtube_validate_strong').hide();
+                $(element).find('#youtube_validate_strong').hide();
             }
             if ($(element).find('input[name=youtube_logged]').val() == "1"){
-                $('#youtube_validate_strong').show();
+                $(element).find('#youtube_validate_strong').show();
             }
         }
         if($(this).find(":selected").val()=="0"){
-            $('#google_access_warning').hide();
-            $('#youtube_validate_strong').hide();
+            $(element).find('#google_access_warning').hide();
+            $(element).find('#youtube_validate_strong').hide();
         }        
       });
     $(element).find('#youtube_validate').bind('click', function(e) {
-        $('#eolzoom_loading_youtube').show();
-        $('#google_access_warning').hide();
+        $(element).find('#eolzoom_loading_youtube').show();
+        $(element).find('#google_access_warning').hide();
         url = settings.url_youtube_validate;
         $.get(url, function(data, status){
             if(data.credentials) {
-                $('#google_access').prop('disabled', false);
+                $(element).find('#google_access').prop('disabled', false);
+                $(element).find('#google_access').css({'background-color':'white'});
                 aux_msg = "Sesión Iniciada.";
                 $(element).find('input[name=youtube_permission_enabled]').val("1");
                 $(element).find('input[name=youtube_logged]').val("1");
@@ -177,20 +178,21 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                     $(element).find('input[name=youtube_permission_enabled]').val("0");
                 }
-                $('#google_access_warning').html(aux_msg);
-                $('#youtube_validate_strong').show();
+                $(element).find('#google_access_warning').html(aux_msg);
+                $(element).find('#youtube_validate_strong').show();
             }
             else{
-                $('#google_access').prop('disabled', true);
+                $(element).find('#google_access').prop('disabled', true);
+                $(element).find('#google_access').css({'background-color':'buttonface', 'opacity': '0.7'});
                 actual_url = btoa(window.location.href); // encode base64
-                $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
+                $(element).find('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
                 $(element).find('input[name=youtube_permission_enabled]').val("0");
                 $(element).find('input[name=youtube_logged]').val("0");
-                $('#youtube_validate_strong').hide();
+                $(element).find('#youtube_validate_strong').hide();
             }
         }).always(function() {
-            $('#eolzoom_loading_youtube').hide();
-            $('#google_access_warning').show();
+            $(element).find('#eolzoom_loading_youtube').hide();
+            $(element).find('#google_access_warning').show();
         });
         return false
       });
@@ -205,8 +207,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         $('.eolzoom_studio').hide();
         $('.eolzoom_studio li.field').hide();
         $('.save-button').hide();
-        $('#eolzoom_loading_youtube').hide();
-        $('#youtube_validate_strong').hide();
+        $(element).find('#eolzoom_loading_youtube').hide();
+        $(element).find('#youtube_validate_strong').hide();
         check_is_logged_google();
         check_is_logged();
         get_login_url();
@@ -272,7 +274,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                 // Show submit button and form whem user is succefully logged
                 if(data.credentials) {
                     is_logged = true
-                    $('#google_access').prop('disabled', false);
+                    $(element).find('#google_access').prop('disabled', false);
+                    $(element).find('#google_access').css({'background-color':'white'});
                     aux_msg = "Sesión Iniciada.";
                     $(element).find('input[name=youtube_permission_enabled]').val("1");
                     $(element).find('input[name=youtube_logged]').val("1");
@@ -286,28 +289,29 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                         aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
-                    $('#google_access_warning').html(aux_msg);
-                    $('#youtube_validate_strong').show();
+                    $(element).find('#google_access_warning').html(aux_msg);
+                    $(element).find('#youtube_validate_strong').show();
                 }
                 else{
                     is_logged = false
-                    $('#google_access').prop('disabled', true);
+                    $(element).find('#google_access').prop('disabled', true);
+                    $(element).find('#google_access').css({'background-color':'buttonface', 'opacity': '0.7'});
                     actual_url = btoa(window.location.href); // encode base64
-                    $('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
+                    $(element).find('#google_access_warning').html(" <a href='" + settings.url_google_auth +  "?redirect="+actual_url+"' >Vincular cuenta Google</a>");
                     $(element).find('input[name=youtube_permission_enabled]').val("0");
-                    $('#youtube_validate_strong').hide();
+                    $(element).find('#youtube_validate_strong').hide();
                     $(element).find('input[name=youtube_logged]').val("0");
                 }
                 if(settings.google_access) {
-                    $('#google_access_warning').show();
+                    $(element).find('#google_access_warning').show();
                 }
                 else{
                     if (is_logged){
-                        $('#google_access_warning').hide();
-                        $('#youtube_validate_strong').hide();  
+                        $(element).find('#google_access_warning').hide();
+                        $(element).find('#youtube_validate_strong').hide();  
                     }
                     else{
-                        $('#google_access_warning').show();
+                        $(element).find('#google_access_warning').show();
                     }
                 }
             });

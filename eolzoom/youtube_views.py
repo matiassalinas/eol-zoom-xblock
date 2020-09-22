@@ -146,12 +146,13 @@ def callback_google_auth(request):
         'token_uri': credentials.token_uri,
         'scopes': credentials.scopes,
         'expiry': str(credentials.expiry)}
-    data = utils_youtube.check_permission_youtube(credentials_dict)
+    data = utils_youtube.check_permission_youtube(credentials_dict, request.user)
     EolGoogleAuth.objects.update_or_create(
         user=request.user,
         defaults={'credentials':json.dumps(credentials_dict),
         'channel_enabled':data['channel'],
-        'livebroadcast_enabled':data['livestream']})
+        'livebroadcast_enabled':data['livestream'],
+        'custom_live_streaming_service': data['livestream_zoom']})
     return HttpResponseRedirect(next_url)
 
 def event_zoom_youtube(request):
@@ -193,7 +194,7 @@ def create_livebroadcast(request):
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
         return JsonResponse(response, safe=False)
-    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '-04:00' # yyyy-mm-ddTHH:mm:ss-04:00
+    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '+00:00' # yyyy-mm-ddTHH:mm:ss+00:00
     start_time = '{}T{}:00{}'.format(
         request.POST['date'],
         request.POST['time'], yt_timezone)
@@ -219,7 +220,7 @@ def youtube_validate(request):
     """
         Verify if user have permission in youtube
     """
-    response = {'channel': False, 'livestream': False, 'credentials': False}
+    response = {'channel': False, 'livestream': False, 'credentials': False, 'livestream_zoom': False}
     if request.method != "GET":
         logger.error("Request method is not GET")
         return HttpResponse(status=400)
@@ -228,11 +229,12 @@ def youtube_validate(request):
         credentials_dict = utils_youtube.get_user_credentials_google(
             credentials_model.credentials)
         if credentials_dict is not None:
-            data = utils_youtube.check_permission_youtube(credentials_dict)
+            data = utils_youtube.check_permission_youtube(credentials_dict, request.user)
             if data['credentials']:
                 credentials_model.credentials = json.dumps(credentials_dict)
                 credentials_model.channel_enabled = data['channel']
                 credentials_model.livebroadcast_enabled = data['livestream']
+                credentials_model.custom_live_streaming_service = data['livestream_zoom']
                 credentials_model.save()
                 response.update(data)
     except EolGoogleAuth.DoesNotExist:
@@ -255,7 +257,7 @@ def update_livebroadcast(request):
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
         return JsonResponse(response, safe=False)
-    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '-04:00' # yyyy-mm-ddTHH:mm:ss-04:00
+    yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '+00:00' # yyyy-mm-ddTHH:mm:ss+00:00
     start_time = '{}T{}:00{}'.format(
         request.POST['date'],
         request.POST['time'], yt_timezone) 

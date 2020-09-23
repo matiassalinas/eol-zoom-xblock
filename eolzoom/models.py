@@ -28,7 +28,7 @@ class EolGoogleAuth(models.Model):
     credentials = models.TextField()
     channel_enabled = models.BooleanField(default=False)
     livebroadcast_enabled = models.BooleanField(default=False)
-
+    custom_live_streaming_service = models.BooleanField(default=False)
 
 class EolZoomRegistrant(models.Model):
     """

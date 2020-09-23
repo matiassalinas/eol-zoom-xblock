@@ -48,7 +48,7 @@ def _get_user_credentials_google(user):
         Return user_credentials, and permission in youtube
     """
     credentials = None
-    data = {'channel': False, 'livestream': False, 'credentials': False}
+    data = {'channel': False, 'livestream': False, 'credentials': False, 'livestream_zoom': False}
     try:
         credentials_model = EolGoogleAuth.objects.get(user=user)
         credentials = get_user_credentials_google(
@@ -59,6 +59,7 @@ def _get_user_credentials_google(user):
             data["credentials"] = True
         data['channel'] = credentials_model.channel_enabled
         data['livestream'] = credentials_model.livebroadcast_enabled
+        data['livestream_zoom'] = credentials_model.custom_live_streaming_service
     except EolGoogleAuth.DoesNotExist:
         pass
     return credentials, data
@@ -70,7 +71,7 @@ def get_user_credentials_google(credentials_json):
     """
     credentials_dict = json.loads(credentials_json)
     # Verificar status credenciales
-    if dt.now() >= dt.strptime(
+    if dt.utcnow() >= dt.strptime(
             credentials_dict["expiry"],
             "%Y-%m-%d %H:%M:%S.%f"):
         data = refresh_access_token_oauth2(
@@ -78,7 +79,7 @@ def get_user_credentials_google(credentials_json):
             credentials_dict["token_uri"])
         if data:
             credentials_dict["token"] = data['access_token']
-            new_expiry = dt.now() + \
+            new_expiry = dt.utcnow() + \
                 datetime.timedelta(seconds=data['expires_in'])
             credentials_dict["expiry"] = str(new_expiry)
         else:
@@ -146,6 +147,19 @@ def insert_broadcast(youtube, start_time, title):
         Create a liveBroadcast resource and set its title, scheduled start time,
         and privacy status.
     """
+    """
+        ***For Python >= 3.7 use this code and replace next block code***
+        from django.utils import timezone
+        now = timezone.now()
+        start_time_utc = dt.fromisoformat(start_time) or dt.strptime(start_time, "%Y-%m-%dT%H:%M:%S%z")
+        if start_time_utc < now:
+            start_time = str(dt.now())
+    """
+    # --- For Python < 3.7 
+    start_time_utc = datetime_to_utc(start_time)
+    if start_time_utc < dt.utcnow():
+        start_time = str(dt.now())
+    # ---
     insert_broadcast_response = youtube.liveBroadcasts().insert(
         part="snippet,status,contentDetails",
         body=dict(
@@ -169,6 +183,15 @@ def insert_broadcast(youtube, start_time, title):
         insert_broadcast_response["id"], snippet["title"], snippet["publishedAt"]))
     return insert_broadcast_response["id"]
 
+def datetime_to_utc(start_time):
+    #start_time =  yyyy-mm-ddTHH:mm:ss+00:00
+    yt_timezone = start_time[-6:]
+    aux_dt = dt.strptime(start_time[:-6], "%Y-%m-%dT%H:%M:%S")
+    if yt_timezone[0] == '-':
+        new_date = aux_dt + datetime.timedelta(hours=int(yt_timezone[1:3]), minutes=int(yt_timezone[4:6]))
+    else:
+        new_date = aux_dt - datetime.timedelta(hours=int(yt_timezone[1:3]), minutes=int(yt_timezone[4:6]))
+    return new_date
 
 def delete_broadcast(youtube, id_live):
     """
@@ -329,8 +352,8 @@ def create_new_live(user_model):
         Create new livestream in youtube and update stream data in zoom meeting
     """
     youtube = create_youtube_object(user_model.user)
-    title = "{} {}".format(user_model.title, str(dt.now()))
-    start_time = str(dt.now())
+    start_time = str(dt.utcnow().strftime("%Y-%m-%dT%H:%M:%S")) + "+00:00"
+    title = "{} {}".format(user_model.title, start_time)
     livebroadcast_data = create_live_in_youtube(
         youtube, start_time, title)
     if livebroadcast_data is None:
@@ -404,19 +427,51 @@ def cretentials_dict_to_object(credentials_dict):
         scopes=credentials_dict["scopes"])
     return credentials
 
-def check_permission_youtube(credentials_dict):
+def check_permission_youtube(credentials_dict, user):
     """
         Verify if user have channel and live permission in Youtube
     """
     credentials = cretentials_dict_to_object(credentials_dict)
-    data = {'channel': False, 'livestream': False, 'credentials': True}
+    data = {'channel': False, 'livestream': False, 'credentials': True, 'livestream_zoom': False}
     youtube = googleapiclient.discovery.build(
         'youtube', 'v3', credentials=credentials, cache_discovery=False)
     data = check_permission_channels(youtube, data)
     data = check_permission_live(youtube, data)
-
+    data = check_permission_live_user_setting(user, data)
     return data
 
+def check_permission_live_user_setting(user, data):
+    """
+        Verify if user have enabled custom livestream service in zoom setting
+    """
+    refresh_token = _get_refresh_token(user)
+    token = get_access_token(user, refresh_token)
+    if 'error' in token:
+        logger.error("Error get_access_token {}, user: {}".format(token['error'],user))
+        return data
+    access_token = token['access_token']
+    headers = {
+        "Authorization": "Bearer {}".format(access_token),
+        "Content-Type": "application/json"
+    }
+    params = {
+        'login_type': 101
+    }
+    user_id = 'me'
+    url = "https://api.zoom.us/v2/users/{}/settings".format(
+        user_id)
+    r = requests.get(
+        url,
+        headers=headers)
+    if r.status_code == 200:
+        response = json.loads(r.content.decode("utf-8"))
+        if response['in_meeting']['custom_live_streaming_service']:
+            data['livestream_zoom'] = True
+        else:
+            logger.error("User dont have enabled custom_live_streaming_service, user: {}, response: {}".format(user, response))
+    else:
+        logger.error("Error to verify custom_live_streaming_service with zoom api, user: {}, response: {}".format(user, r.content))
+    return data
 
 def check_permission_channels(youtube, data):
     """
@@ -446,8 +501,8 @@ def check_permission_live(youtube, data):
         Create and remove a live on Youtube
     """
     try:
-        id_live = insert_broadcast(youtube, str(
-            dt.now()), "EOL - Validate permission")
+        start_time = str(dt.now().strftime("%Y-%m-%dT%H:%M:%S")) + "+00:00"
+        id_live = insert_broadcast(youtube, start_time, "EOL - Validate permission")
         delete_broadcast(youtube, id_live)
         data['livestream'] = True
     except HttpError as e:
@@ -463,6 +518,19 @@ def update_live_in_youtube(youtube, start_time, title, id_live):
     """
         Update livestreams youtube with new data
     """
+    """
+        ***For Python >= 3.7 use this code and replace next block code***
+        from django.utils import timezone
+        now = timezone.now()
+        start_time_utc = dt.fromisoformat(start_time) or dt.strptime(start_time, "%Y-%m-%dT%H:%M:%S%z")
+        if start_time_utc < now:
+            start_time = str(dt.now())
+    """
+    # --- For Python < 3.7 
+    start_time_utc = datetime_to_utc(start_time)
+    if start_time_utc < dt.utcnow():
+        start_time = str(dt.now())
+    # ---
     try:
         request = youtube.liveBroadcasts().update(
             part="id,snippet",

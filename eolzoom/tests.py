@@ -1145,47 +1145,55 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(GOOGLE_REDIRECT_URIS=[
                        "https://studio.test.cl/zoom/callback_google_auth"])
     @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
+    @patch('eolzoom.utils_youtube.check_permission_live_user_setting')
     @patch('eolzoom.utils_youtube.check_permission_live')
     @patch('eolzoom.utils_youtube.check_permission_channels')
     @patch('google_auth_oauthlib.flow.Flow.fetch_token')
-    def test_callback_google_auth(self, flow, channel, live):
+    def test_callback_google_auth(self, flow, channel, live, live_zoom):
         """
             Test callback_google_auth normal process
         """
         with patch('google_auth_oauthlib.flow.Flow.credentials', new_callable=PropertyMock) as mock_foo:
             channel.return_value = {
-    'channel': True,
-    'livestream': False,
-     'credentials': True}
+                'channel': True,
+                'livestream': False,
+                'credentials': True,
+                'livestream_zoom': False}
             live.return_value = {
-    'channel': True,
-    'livestream': True,
-     'credentials': True}
+                'channel': True,
+                'livestream': True,
+                'credentials': True,
+                'livestream_zoom': False}
+            live_zoom.return_value = {
+                'channel': True,
+                'livestream': True,
+                'credentials': True,
+                'livestream_zoom': True}
             mock_foo.return_value = namedtuple(
-    "Flow",
-    [
-        "token",
-        "refresh_token",
-        'token_uri',
-        'scopes',
-        'expiry'])(
-            "this-is-a-token",
-            "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
-            "https://www.googleapis.com/oauth2/v3/token",
-            ["https://www.googleapis.com/auth/youtube.force-ssl"],
-             dt.now())
+                "Flow",
+                [
+                    "token",
+                    "refresh_token",
+                    'token_uri',
+                    'scopes',
+                    'expiry'])(
+                        "this-is-a-token",
+                        "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
+                        "https://www.googleapis.com/oauth2/v3/token",
+                        ["https://www.googleapis.com/auth/youtube.force-ssl"],
+                        dt.utcnow())
             data = {
-    'state': 'Lw==',
-    'code': 'asdf',
-     'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'}
+                'state': 'Lw==',
+                'code': 'asdf',
+                'scope': 'https://www.googleapis.com/auth/youtube.force-ssl'}
             self.assertFalse(
-    EolGoogleAuth.objects.filter(
-        user=self.user).exists())
+                EolGoogleAuth.objects.filter(
+                    user=self.user).exists())
             result = self.client.get(
-    reverse('callback_google_auth'), data=data)
+                reverse('callback_google_auth'), data=data)
             self.assertTrue(
-    EolGoogleAuth.objects.filter(
-        user=self.user).exists())
+                EolGoogleAuth.objects.filter(
+                    user=self.user).exists())
 
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
@@ -1194,10 +1202,11 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(GOOGLE_REDIRECT_URIS=[
                        "https://studio.test.cl/zoom/callback_google_auth"])
     @override_settings(GOOGLE_JAVASCRIPT_ORIGINS=["https://studio.test.cl"])
+    @patch('eolzoom.utils_youtube.check_permission_live_user_setting')
     @patch('eolzoom.utils_youtube.check_permission_live')
     @patch('eolzoom.utils_youtube.check_permission_channels')
     @patch('google_auth_oauthlib.flow.Flow.fetch_token')
-    def test_callback_google_auth_exists_user(self, flow, channel, live):
+    def test_callback_google_auth_exists_user(self, flow, channel, live, live_zoom):
         """
             Test callback_google_auth normal process
         """
@@ -1205,11 +1214,18 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             channel.return_value = {
                 'channel': True,
                 'livestream': False,
-                'credentials': True}
+                'credentials': True,
+                'livestream_zoom': False}
             live.return_value = {
                 'channel': True,
                 'livestream': True,
-                'credentials': True}
+                'credentials': True,
+                'livestream_zoom': False}
+            live_zoom.return_value = {
+                'channel': True,
+                'livestream': True,
+                'credentials': True,
+                'livestream_zoom': True}
             mock_foo.return_value = namedtuple(
                 "Flow",
                 [
@@ -1236,10 +1252,12 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             user_auth = EolGoogleAuth.objects.create(user=self.user, credentials=json.dumps(credentials))
             self.assertFalse(user_auth.channel_enabled)
             self.assertFalse(user_auth.livebroadcast_enabled)
+            self.assertFalse(user_auth.custom_live_streaming_service)
             result = self.client.get(reverse('callback_google_auth'), data=data)
             user_auth_2 = EolGoogleAuth.objects.get(user=self.user)
             self.assertTrue(user_auth_2.channel_enabled)
             self.assertTrue(user_auth_2.livebroadcast_enabled)
+            self.assertTrue(user_auth_2.custom_live_streaming_service)
 
     def test_callback_google_auth_not_state(self):
         """
@@ -1310,6 +1328,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['livestream'], False)
         self.assertEqual(data['credentials'], True)
         self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream_zoom'], False)
         self.assertNotEqual(new_credentials['expiry'], credentials['expiry'])
         self.assertEqual(new_credentials['token'], '1/fFAGRNJru1FTz70BzhT3Zg')
 
@@ -1322,6 +1341,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['livestream'], False)
         self.assertEqual(data['credentials'], False)
         self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream_zoom'], False)
 
     @patch("requests.post")
     def test_google_is_logged_error_refresh_token(self, post):
@@ -1355,13 +1375,14 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['livestream'], False)
         self.assertEqual(data['credentials'], False)
         self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream_zoom'], False)
         self.assertEqual(new_credentials, credentials)
 
     def test_google_is_logged_datetime_now(self):
         """
             Test google_is_logged with credentials.expiry is not expired
         """
-        new_expiry = dt.now() + datetime.timedelta(seconds=3600)
+        new_expiry = dt.utcnow() + datetime.timedelta(seconds=3600)
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
@@ -1377,6 +1398,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['livestream'], False)
         self.assertEqual(data['credentials'], True)
         self.assertEqual(data['channel'], False)
+        self.assertEqual(data['livestream_zoom'], False)
         self.assertEqual(new_credentials, credentials)
 
     @patch("requests.post")
@@ -1392,19 +1414,38 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.utils_youtube.check_permission_live')
     @patch('eolzoom.utils_youtube.check_permission_channels')
-    def test_youtube_validate(self, channel, live):
+    @patch("requests.get")
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_youtube_validate(self, post, patch, get, channel, live):
         """
             Test youtube_validate normal process
         """
-        new_expiry = dt.now() + datetime.timedelta(seconds=3600)
+        new_expiry = dt.utcnow() + datetime.timedelta(seconds=3600)
         channel.return_value = {
-    'channel': True,
-    'livestream': False,
-     'credentials': True}
+            'channel': True,
+            'livestream': False,
+            'credentials': True,
+            'livestream_zoom': False}
         live.return_value = {
-    'channel': True,
-    'livestream': True,
-     'credentials': True}
+            'channel': True,
+            'livestream': True,
+            'credentials': True,
+            'livestream_zoom': False}
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
+        get.side_effect = [namedtuple("Request", ["status_code", "content" ])(200, json.dumps({'in_meeting':{'custom_live_streaming_service':True}}).encode("utf-8")), ]
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
@@ -1412,44 +1453,65 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
             'expiry': str(new_expiry)}
         EolGoogleAuth.objects.create(
-    user=self.user, credentials=json.dumps(credentials))
+            user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('youtube_validate'))
         data = json.loads(result.content.decode())
         self.assertEqual(data['credentials'], True)
         self.assertEqual(data['channel'], True)
         self.assertEqual(data['livestream'], True)
+        self.assertEqual(data['livestream_zoom'], True)
 
     @override_settings(
     GOOGLE_CLIENT_ID='test-client-id.apps.googleusercontent.com')
     @override_settings(GOOGLE_CLIENT_SECRET='1234567890asdfgh')
     @patch('eolzoom.utils_youtube.check_permission_live')
     @patch('eolzoom.utils_youtube.check_permission_channels')
-    def test_youtube_validate_not_channel_live(self, channel, live):
+    @patch("requests.get")
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_youtube_validate_not_channel_live(self, post, patch, get, channel, live):
         """
             Test youtube_validate if user dont have channel or live permission
         """
         new_expiry = dt.now() + datetime.timedelta(seconds=3600)
         channel.return_value = {
-    'channel': False,
-    'livestream': False,
-     'credentials': True}
+            'channel': False,
+            'livestream': False,
+            'credentials': True,
+            'livestream_zoom': False}
         live.return_value = {
-    'channel': False,
-    'livestream': False,
-     'credentials': True}
+            'channel': False,
+            'livestream': False,
+            'credentials': True,
+            'livestream_zoom': False}
         credentials = {
             'token': "this-is-a-token",
             'refresh_token': "1//xEoDL4iW3cxlI7yDbSRFYNG01kVKM2C-259HOF2aQbI",
             'token_uri': "https://www.googleapis.com/oauth2/v3/token",
             'scopes': ["https://www.googleapis.com/auth/youtube.force-ssl"],
             'expiry': str(new_expiry)}
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
+        get.side_effect = [namedtuple("Request", ["status_code", "content" ])(200, json.dumps({'in_meeting':{'custom_live_streaming_service':True}}).encode("utf-8")), ]
         EolGoogleAuth.objects.create(
-    user=self.user, credentials=json.dumps(credentials))
+            user=self.user, credentials=json.dumps(credentials))
         result = self.client.get(reverse('youtube_validate'))
         data = json.loads(result.content.decode())
         self.assertEqual(data['credentials'], True)
         self.assertEqual(data['channel'], False)
         self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['livestream_zoom'], True)
 
     def test_youtube_validate_wrong_token(self):
         """
@@ -1469,6 +1531,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['credentials'], False)
         self.assertEqual(data['channel'], False)
         self.assertEqual(data['livestream'], False)
+        self.assertEqual(data['livestream_zoom'], False)
 
     def test_youtube_validate_post(self):
         """
@@ -1496,7 +1559,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     user=self.user,
     credentials=json.dumps(credentials),
     channel_enabled=True,
-     livebroadcast_enabled=True)
+     livebroadcast_enabled=True,
+     custom_live_streaming_service=True)
         updt_yt.return_value = "09876"
         post_data = {
             'display_name': 'display_name',
@@ -1623,7 +1687,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
     user=self.user,
     credentials=json.dumps(credentials),
     channel_enabled=True,
-     livebroadcast_enabled=True)
+     livebroadcast_enabled=True,
+     custom_live_streaming_service=True)
         EolZoomAuth.objects.create(
     user=self.user,
      zoom_refresh_token='test_refresh_token')
@@ -1815,7 +1880,8 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
             user=self.user,
             credentials=json.dumps(credentials),
             channel_enabled=True,
-            livebroadcast_enabled=True)
+            livebroadcast_enabled=True,
+            custom_live_streaming_service=True)
         EolZoomAuth.objects.create(
             user=self.user,
             zoom_refresh_token='test_refresh_token')
@@ -2342,3 +2408,100 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         request.params = post_data
         result = youtube_views.event_zoom_youtube(request)
         self.assertEqual(result.status_code, 200)
+    
+    @patch("requests.get")
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_check_permission_live_user_setting(self, post, patch, get):
+        """
+            Test check_permission_live_user_setting function normal process
+        """
+        data = {
+            'channel': False,
+            'livestream': False,
+            'credentials': False,
+            'livestream_zoom': False}
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
+        get.side_effect = [namedtuple("Request", ["status_code", "content" ])(200, json.dumps({'in_meeting':{'custom_live_streaming_service':True}}).encode('utf-8')), ]
+        resp = utils_youtube.check_permission_live_user_setting(self.user, data)
+        self.assertTrue(resp['livestream_zoom'])
+
+    @patch("requests.get")
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_check_permission_live_user_setting_return_false(self, post, patch, get):
+        """
+            Test check_permission_live_user_setting function if user dont have enabled custom_live_streaming_service
+        """
+        data = {
+            'channel': False,
+            'livestream': False,
+            'credentials': False,
+            'livestream_zoom': False}
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
+        get.side_effect = [namedtuple("Request", ["status_code", "content" ])(200, json.dumps({'in_meeting':{'custom_live_streaming_service':False}}).encode('utf-8')), ]
+        resp = utils_youtube.check_permission_live_user_setting(self.user, data)
+        self.assertFalse(resp['livestream_zoom'])
+
+    @patch("requests.get")
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_check_permission_live_user_setting_fail_get(self, post, patch, get):
+        """
+            Test check_permission_live_user_setting function fail requests.get
+        """
+        data = {
+            'channel': False,
+            'livestream': False,
+            'credentials': False,
+            'livestream_zoom': False}
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), ]
+        get.side_effect = [namedtuple("Request", ["status_code", "content" ])(400, json.dumps({'error':'error_content'}).encode('utf-8')), ]
+        resp = utils_youtube.check_permission_live_user_setting(self.user, data)
+        self.assertFalse(resp['livestream_zoom'])
+
+    def test_datetime_to_utc(self):
+        """
+            Test function that convert datetime w/timezone string to datetime utc 
+        """
+        #start_time =  yyyy-mm-ddTHH:mm:ss+00:00
+        dates = ['2020-09-22T12:00:00+00:00','2020-09-22T12:00:00+03:00','2020-09-22T12:00:00-03:00']
+        self.assertTrue(utils_youtube.datetime_to_utc(dates[0]), dt.strptime('2020-09-22T12:00:00', "%Y-%m-%dT%H:%M:%S"))
+        self.assertTrue(utils_youtube.datetime_to_utc(dates[1]), dt.strptime('2020-09-22T09:00:00', "%Y-%m-%dT%H:%M:%S"))
+        self.assertTrue(utils_youtube.datetime_to_utc(dates[2]), dt.strptime('2020-09-22T15:00:00', "%Y-%m-%dT%H:%M:%S"))

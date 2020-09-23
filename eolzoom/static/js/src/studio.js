@@ -26,7 +26,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             return;
         }
         if(youtube_permission_enabled != "1" && google_access) {
-            alert("Permisos insufiecientes con la cuenta de Google asociada");
+            alert("Permisos insufiecientes con la cuenta de Google o Zoom asociada");
             e.preventDefault();
             return;
         }
@@ -169,13 +169,18 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                 $(element).find('input[name=youtube_permission_enabled]').val("1");
                 $(element).find('input[name=youtube_logged]').val("1");
                 if(!data.channel){
-                    aux_msg = aux_msg + "</br>Cuenta no posee canal de YouTube."
+                    aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no posee canal de YouTube.</span>"
                 }
                 if(!data.livestream){
-                    aux_msg = aux_msg + "</br>Cuenta no habilitada para realizar Live en Youtube."
+                    aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no habilitada para realizar Live en Youtube.</span>"
+                }
+                if(!data.livestream_zoom){
+                    aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no tiene habilitado 'Servicio personalizado de transmisión en vivo' en zoom.</span>"
+                    aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
+                    $(element).find('input[name=youtube_permission_enabled]').val("0");
                 }
                 if(!data.livestream || !data.channel){
-                    aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                    aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                     $(element).find('input[name=youtube_permission_enabled]').val("0");
                 }
                 $(element).find('#google_access_warning').html(aux_msg);
@@ -280,13 +285,18 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     $(element).find('input[name=youtube_permission_enabled]').val("1");
                     $(element).find('input[name=youtube_logged]').val("1");
                     if(!data.channel){
-                        aux_msg = aux_msg + "</br>Cuenta no posee canal de YouTube."
+                        aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no posee canal de YouTube.</span>"
                     }
                     if(!data.livestream){
-                        aux_msg = aux_msg + "</br>Cuenta no habilitada para realizar Live en Youtube."
+                        aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no habilitada para realizar Live en Youtube.</span>"
+                    }
+                    if(!data.livestream_zoom){
+                        aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no tiene habilitado 'Servicio personalizado de transmisión en vivo' en zoom.</span>"
+                        aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
+                        $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     if(!data.livestream || !data.channel){
-                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     $(element).find('#google_access_warning').html(aux_msg);

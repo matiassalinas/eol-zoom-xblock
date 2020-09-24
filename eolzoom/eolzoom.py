@@ -247,7 +247,7 @@ class EolZoomXBlock(XBlock):
     def get_broadcast_id(self):
         from .models import EolZoomMappingUserMeet
         try:
-            user_model = EolZoomMappingUserMeet.objects.get(user=self.runtime.user_id, meeting_id=self.meeting_id)
+            user_model = EolZoomMappingUserMeet.objects.get(meeting_id=self.meeting_id)
             if user_model.broadcast_ids == "":
                 return []
             broadcast_ids = user_model.broadcast_ids.split(" ")

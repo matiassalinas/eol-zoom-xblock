@@ -26,7 +26,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
             return;
         }
         if(youtube_permission_enabled != "1" && google_access) {
-            alert("Permisos insufiecientes con la cuenta de Google o Zoom asociada");
+            alert("Permisos insuficientes con la cuenta de Google o Zoom asociada");
             e.preventDefault();
             return;
         }
@@ -102,9 +102,13 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                                 save_form(form_data)
                             }
                             else {
+                                msg = 'Actualice la página y reintente nuevamente, si el error persiste contáctese a eol-ayuda@uchile.cl';
+                                if (data_response['text'] == 'youtube_500'){
+                                    msg = 'Youtube tiene problemas para configurar el Livestream, reintente mas tarde, si el error persiste contáctese a eol-ayuda@uchile.cl'
+                                }
                                 runtime.notify('error',  {
                                     title: 'Error: Falló en Guardar',
-                                    message: 'Actualice la página y reintente nuevamente, si el error persiste contáctese a eol-ayuda@uchile.cl'
+                                    message: msg
                                 });
                             }                            
                         }

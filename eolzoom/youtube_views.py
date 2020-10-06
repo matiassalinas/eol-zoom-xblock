@@ -189,10 +189,12 @@ def create_livebroadcast(request):
         return HttpResponse(status=400)
     if 'display_name' not in request.POST or 'meeting_id' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST:
         logger.debug("Params Error, user: {}, request.POST: {}".format(request.user, request.POST.__dict__))
+        response['text'] = "Params Error"
         return JsonResponse(response, safe=False)
 
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
+        response['text'] = "Error to create youtube object"
         return JsonResponse(response, safe=False)
     yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '+00:00' # yyyy-mm-ddTHH:mm:ss+00:00
     start_time = '{}T{}:00{}'.format(
@@ -203,6 +205,11 @@ def create_livebroadcast(request):
         youtube, start_time, request.POST['display_name'])
     if livebroadcast_data is None:
         logger.error("Error in Create live in youtube, user: {}, id_meeting: {}".format(request.user, request.POST['meeting_id']))
+        response['text'] = "Error in Create live in youtube"
+        return JsonResponse(response, safe=False)
+    if livebroadcast_data is False:
+        logger.error("Youtube have problem to create livestream, user: {}, id_meeting: {}".format(request.user, request.POST['meeting_id']))
+        response['text'] = "youtube_500"
         return JsonResponse(response, safe=False)
     status = utils_youtube.update_meeting_youtube(
         request.user,
@@ -213,7 +220,8 @@ def create_livebroadcast(request):
         if save:
             response['status'] = "ok"
             response['id_broadcast'] = livebroadcast_data['broadcast_id']
-        
+    else:
+        response['text'] = "error in update_meeting_youtube or save_broadcast_id"
     return JsonResponse(response, safe=False)
 
 def youtube_validate(request):
@@ -252,10 +260,12 @@ def update_livebroadcast(request):
         return HttpResponse(status=400)
     if 'display_name' not in request.POST or 'meeting_id' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'broadcast_id' not in request.POST:
         logger.debug("Params Error, user: {}, request.POST: {}".format(request.user, request.POST.__dict__))
+        response['text'] = "Params Error"
         return JsonResponse(response, safe=False)
 
     youtube = utils_youtube.create_youtube_object(request.user)
     if youtube is None:
+        response['text'] = "Error to create youtube object"
         return JsonResponse(response, safe=False)
     yt_timezone = settings.EOLZOOM_YOUTUBE_TIMEZONE or '+00:00' # yyyy-mm-ddTHH:mm:ss+00:00
     start_time = '{}T{}:00{}'.format(
@@ -270,4 +280,6 @@ def update_livebroadcast(request):
     if id_live:
         response['status'] = "ok"
         response['id_broadcast'] = id_live
+    else:
+        response['text'] = "error in update_live_in_youtube"
     return JsonResponse(response, safe=False)

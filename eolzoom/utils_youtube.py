@@ -136,6 +136,8 @@ def create_live_in_youtube(youtube, start_time, title):
         logger.error(
             "An HTTP error {} occurred:\n{}".format(
                 e.resp.status, e.content))
+        if e.resp.status == 500:
+            return False
         return None
     except RefreshError:
         logger.error("An error occurred with token user in create_live_in_youtube()")
@@ -209,15 +211,16 @@ def insert_stream(youtube):
     """
     insert_stream_response = youtube.liveStreams().insert(
         part="snippet,cdn",
-        body=dict(
-            snippet=dict(
-                title="New Stream"
-            ),
-            cdn=dict(
-                format="720p",
-                ingestionType="rtmp"
-            )
-        )
+        body={
+          "cdn": {
+            "resolution": "720p",
+            "ingestionType": "rtmp",
+            "frameRate": "30fps"
+          },
+          "snippet": {
+            "title": "New Stream"
+          }
+        }
     ).execute()
 
     snippet = insert_stream_response["snippet"]
@@ -356,7 +359,7 @@ def create_new_live(user_model):
     title = "{} {}".format(user_model.title, start_time)
     livebroadcast_data = create_live_in_youtube(
         youtube, start_time, title)
-    if livebroadcast_data is None:
+    if livebroadcast_data is None or livebroadcast_data is False:
         logger.error("Error in Create live in youtube, user: {}, id_meeting: {}".format(user_model.user, user_model.meeting_id))
         return None
     status = update_meeting_youtube(

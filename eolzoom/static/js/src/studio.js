@@ -41,6 +41,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('restricted_access', restricted_access);
         form_data.append('email_notification', email_notification);
         form_data.append('google_access', google_access);
+        form_data.append('course_id', settings.course_id);
+        form_data.append('block_id', settings.block_id);
 
         /*
         * Set update meeting url if already have a meeting_id

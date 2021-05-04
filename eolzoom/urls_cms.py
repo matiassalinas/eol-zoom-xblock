@@ -3,8 +3,8 @@
 from django.conf.urls import url
 from django.conf import settings
 
-from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting, start_meeting, start_public_meeting, get_student_join_url
-from .youtube_views import google_is_logged, auth_google, callback_google_auth, create_livebroadcast, youtube_validate, update_livebroadcast, event_zoom_youtube
+from .views import zoom_api, new_scheduled_meeting, is_logged_zoom, update_scheduled_meeting, start_meeting, start_public_meeting, get_student_join_url, event_zoom
+from .youtube_views import google_is_logged, auth_google, callback_google_auth, create_livebroadcast, youtube_validate, update_livebroadcast
 
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
@@ -51,7 +51,7 @@ urlpatterns = (
         name='start_meeting',
     ),
     url(
-        r'^zoom/start_public_meeting/(?P<block_id>.*)/(?P<meeting_id>.*)$',
+        r'^zoom/start_public_meeting/(?P<email_notification>.*)/(?P<meeting_id>.*)/(?P<block_id>.*)/(?P<restricted_access>.*)$',
         login_required(start_public_meeting),
         name='start_public_meeting',
     ),
@@ -76,8 +76,8 @@ urlpatterns = (
         name='youtube_validate',
     ),
     url(
-        r'^zoom/event_zoom_youtube',
-        csrf_exempt(event_zoom_youtube),
-        name='event_zoom_youtube',
+        r'^zoom/event_zoom',
+        csrf_exempt(event_zoom),
+        name='event_zoom',
     ),
 )

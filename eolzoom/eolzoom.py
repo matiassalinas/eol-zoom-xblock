@@ -140,14 +140,17 @@ class EolZoomXBlock(XBlock):
         frag.add_javascript(self.resource_string("static/js/src/eolzoom.js"))
         settings = {
             'meeting_id': self.meeting_id,
+            'block_id': self.location,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
-            'location' : self.location if self.email_notification else None,
+            'email_notification' : self.email_notification,
             'url_start_public_meeting':reverse(
                 'start_public_meeting',
                     kwargs={
-                        'block_id': self.location if self.email_notification else None,
-                        'meeting_id': self.meeting_id
+                        'email_notification':self.email_notification,
+                        'meeting_id': self.meeting_id,
+                        'block_id': self.location,
+                        'restricted_access': self.restricted_access
                     }
             ),
             'url_start_meeting': reverse('start_meeting'),
@@ -177,6 +180,8 @@ class EolZoomXBlock(XBlock):
             'created_by': self.created_by,
             'edx_created_by': self.edx_created_by,
             'user_id': self._edited_by,
+            'course_id': text_type(self.scope_ids.usage_id.course_key),
+            'block_id': self.location,
             'start_url': self.start_url,
             'join_url': self.join_url,
             'restricted_access': self.restricted_access,
@@ -212,14 +217,17 @@ class EolZoomXBlock(XBlock):
 
         settings = {
             'meeting_id': self.meeting_id,
+            'block_id': self.location,
             'course_id': text_type(
                 self.xmodule_runtime.course_id),
-            'location' : self.location if self.email_notification else None,
+            'email_notification': self.email_notification,
             'url_start_public_meeting':reverse(
                 'start_public_meeting',
                     kwargs={
-                        'block_id': self.location if self.email_notification else None,
-                        'meeting_id': self.meeting_id
+                        'email_notification':self.email_notification,
+                        'meeting_id': self.meeting_id,
+                        'block_id': self.location,
+                        'restricted_access': self.restricted_access
                     }
             ),
             'url_start_meeting': reverse('start_meeting'),

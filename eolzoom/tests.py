@@ -18,9 +18,10 @@ from xmodule.modulestore.tests.factories import CourseFactory
 from student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xblock.field_data import DictFieldData
 from student.roles import CourseStaffRole
+from opaque_keys.edx.keys import CourseKey, UsageKey
 from django.test.utils import override_settings
 from .eolzoom import EolZoomXBlock
-
+from django.contrib.auth.models import AnonymousUser
 from six import text_type
 import urllib.parse
 from urllib.parse import parse_qs
@@ -44,7 +45,16 @@ class TestRequest(object):
     success = None
     params = None
     headers = None
-
+    user = None
+    META = {
+        'REMOTE_ADDR': '',
+        'HTTP_USER_AGENT': '',
+        'SERVER_NAME':'',
+        'HTTP_X_FORWARDED_PROTO': 'https'
+    }
+    user = None
+    get_host = Mock()
+    is_secure = Mock()
 
 class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
     def setUp(self):
@@ -68,6 +78,8 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             # Create the user
             self.user = UserFactory(
                 username=uname, password=password, email=email)
+            self.aux_user = UserFactory(
+                username='aux_name', password='password', email='student.aux@edx.org')
             CourseEnrollmentFactory(
                 user=self.user,
                 course_id=self.course.id)
@@ -80,7 +92,14 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                     password=password
                 )
             )
-
+            self.client_2 = Client()
+            self.client_3 = Client()
+            self.assertTrue(
+                self.client_2.login(
+                    username='aux_name',
+                    password='password'
+                )
+            )
             # Create refresh_token
             self.zoom_auth = EolZoomAuth.objects.create(
                 user=self.user,
@@ -270,7 +289,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'time': '10:10',
             'duration': '40',
             'google_access': 'true',
-            'restricted_access': 'false'
+            'restricted_access': 'false',
+            'email_notification': 'false',
+            'course_id': str(self.course.id),
+            'block_id': self.block_id
         }
         response = self.client.post(
             reverse('new_scheduled_meeting'), post_data)
@@ -314,7 +336,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'duration': '40',
             'meeting_id': 'meeting_id',
             'google_access': 'true',
-            'restricted_access': 'false'
+            'restricted_access': 'false',
+            'email_notification': 'false',
+            'course_id': str(self.course.id),
+            'block_id': self.block_id
         }
         response = self.client.post(
             reverse('update_scheduled_meeting'), post_data)
@@ -358,7 +383,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             'duration': '40',
             'meeting_id': 'meeting_id',
             'google_access': 'true',
-            'restricted_access': 'false'
+            'restricted_access': 'false',
+            'email_notification': 'false',
+            'course_id': str(self.course.id),
+            'block_id': self.block_id
         }
         EolZoomMappingUserMeet.objects.create(
                 meeting_id="meeting_id", user=self.user, title="topic", is_enabled=False)
@@ -369,6 +397,10 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         self.assertEqual(data['meeting_id'], post_data['meeting_id'])
         self.assertEqual(user_model.is_enabled, True)
         self.assertEqual(user_model.title, 'display_name')
+        self.assertEqual(user_model.restricted_access, False)
+        self.assertEqual(user_model.email_notification, False)
+        self.assertEqual(user_model.course_key, self.course.id)
+        self.assertEqual(user_model.usage_key, UsageKey.from_string(self.block_id))
 
     @patch("requests.post")
     @patch("requests.get")
@@ -577,7 +609,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         """
         students = []
         meeting_id = 'meeting_id'
-        views._submit_join_url(students, meeting_id, self.block_id)
+        views._submit_join_url(students, meeting_id, self.block_id, True)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 0)
 
@@ -599,11 +631,11 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
                 'join_url': "join_url_4"
             },
         ]
-        views._submit_join_url(students, meeting_id, self.block_id)
+        views._submit_join_url(students, meeting_id, self.block_id, True)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 4)
 
-        views._submit_join_url(students, meeting_id, self.block_id)
+        views._submit_join_url(students, meeting_id, self.block_id, True)
         registrants = EolZoomRegistrant.objects.filter(meeting_id=meeting_id)
         self.assertEqual(registrants.count(), 4)
 
@@ -662,6 +694,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         """
             Test start meeting GET request
         """
+        EolZoomMappingUserMeet.objects.create(meeting_id="meeting_id", user=self.user, title="I am a title", is_enabled=True)
         get_refresh_token.side_effect = [{
             "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ3Mzk0LCJleHAiOjE1ODAxNTA5OTQsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0NzM5NCwianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjZ9.5c58p0PflZJdlz4Y7PgMIVCrQpHDnbM565iCKlrtajZ5HHmy00P5FCcoMwHb9LxjsUgbJ7653EfdeX5NEm6RoA",
             "token_type": "bearer",
@@ -689,14 +722,125 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         data = {
             "meeting_id": "meeting_id",
             "course_id": text_type(self.course.id),
-            "block_id": self.block_id
+            "block_id": self.block_id,
+            'restricted_access' : False,
+            'email_notification' : False
         }
         get_data = {
             "code": "code",
             "data": base64.b64encode(json.dumps(data).encode("utf-8"))
         }
         response = self.client.get(reverse('start_meeting'), get_data)
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id='meeting_id')
+        self.assertEqual(user_model.email_notification, False)
+        self.assertEqual(user_model.usage_key, UsageKey.from_string(self.block_id))
+        self.assertEqual(user_model.restricted_access, False)
         self.assertEqual(response.status_code, 302)
+
+    @patch("eolzoom.views.get_refresh_token")
+    def test_start_meeting_fail(self, get_refresh_token):
+        """
+            Test start meeting when responses error 400
+        """
+        data = {
+            "meeting_id": "meeting_id",
+            "course_id": text_type(self.course.id),
+            "block_id": self.block_id,
+            'restricted_access' : False,
+            'email_notification' : False
+        }
+        get_data = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data).encode("utf-8"))
+        }
+        # post method
+        response1 = self.client.post(reverse('start_meeting'))
+        self.assertEqual(response1.status_code, 400)
+        # anonymous user
+        response2 = self.client_3.get(reverse('start_meeting'), get_data)
+        self.assertEqual(response2.status_code, 302)
+        #code or data not in request
+        response3 = self.client.get(reverse('start_meeting'), {})
+        self.assertEqual(response3.status_code, 400)
+        #wrong key in data
+        data2 = {
+            "meeting_id": "meeting_id",
+            "course_id": text_type(self.course.id),
+            'email_notification' : False
+        }
+        get_data2 = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data2).encode("utf-8"))
+        }
+        response4 = self.client.get(reverse('start_meeting'), get_data2)
+        self.assertEqual(response4.status_code, 400)
+        #wrong block_id
+        data2 = {
+            "meeting_id": "meeting_id",
+            "course_id": text_type(self.course.id),
+            "block_id": 'asdasdsadsa',
+            'restricted_access' : False,
+            'email_notification' : False
+        }
+        get_data2 = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data2).encode("utf-8"))
+        }
+        response5 = self.client.get(reverse('start_meeting'), get_data2)
+        self.assertEqual(response5.status_code, 400)
+        #wrong course_id
+        data2 = {
+            "meeting_id": "meeting_id",
+            "course_id": 'asdasdsadsa',
+            "block_id": self.block_id,
+            'restricted_access' : False,
+            'email_notification' : False
+        }
+        get_data2 = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data2).encode("utf-8"))
+        }
+        response6 = self.client.get(reverse('start_meeting'), get_data2)
+        self.assertEqual(response6.status_code, 400)
+        #wrong type
+        data2 = {
+            "meeting_id": "meeting_id",
+            "course_id": text_type(self.course.id),
+            "block_id": self.block_id,
+            'restricted_access' : 'False',
+            'email_notification' : 'False'
+        }
+        get_data2 = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data2).encode("utf-8"))
+        }
+        response7 = self.client.get(reverse('start_meeting'), get_data2)
+        self.assertEqual(response7.status_code, 400)
+        
+        EolZoomMappingUserMeet.objects.create(meeting_id="meeting_id", user=self.user, title="I am a title", is_enabled=True)
+        #wrong user
+        response8 = self.client_2.get(reverse('start_meeting'), get_data)
+        self.assertEqual(response8.status_code, 400)
+        #meet_id dont exists
+        data2 = {
+            "meeting_id": "zxc",
+            "course_id": text_type(self.course.id),
+            "block_id": self.block_id,
+            'restricted_access' : 'False',
+            'email_notification' : 'False'
+        }
+        get_data2 = {
+            "code": "code",
+            "data": base64.b64encode(json.dumps(data2).encode("utf-8"))
+        }
+        response9 = self.client.get(reverse('start_meeting'), get_data2)
+        self.assertEqual(response9.status_code, 400)
+        #error to get token
+        get_refresh_token.side_effect = [{
+            'error':'error'
+        }]
+        response0 = self.client.get(reverse('start_meeting'), get_data)
+        self.assertEqual(response0.status_code, 400)
 
     def test_start_public_meeting(self):
         """
@@ -704,12 +848,15 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             1. With block_id (email_notification is True)
             2. With block_id None (email_notification is False)
         """
+        EolZoomMappingUserMeet.objects.create(meeting_id="meeting_id", user=self.user, title="I am a title", is_enabled=True)
         response = self.client.get(
             reverse(
                 'start_public_meeting',
                     kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
                         'block_id': self.block_id,
-                        'meeting_id': "meeting_id"
+                        'restricted_access': "False"
                     }
             )
         )
@@ -719,24 +866,115 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
             reverse(
                 'start_public_meeting',
                     kwargs={
-                        'block_id': "None",
-                        'meeting_id': "meeting_id"
-                    }
-            )
-        )
-        self.assertEqual(response.status_code, 302)
-
-
-        response = self.client.get(
-            reverse(
-                'start_public_meeting',
-                    kwargs={
+                        'email_notification':"False",
+                        'meeting_id': "meeting_id",
                         'block_id': self.block_id,
-                        'meeting_id': "meeting_id"
+                        'restricted_access': "False"
                     }
             )
         )
         self.assertEqual(response.status_code, 302)
+
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
+                        'block_id': self.block_id,
+                        'restricted_access': "False"
+                    }
+            )
+        )
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id='meeting_id')
+        self.assertEqual(user_model.email_notification, True)
+        self.assertEqual(user_model.usage_key, UsageKey.from_string(self.block_id))
+        self.assertEqual(user_model.restricted_access, False)
+        self.assertEqual(response.status_code, 302)
+
+    def test_start_public_meeting_fail(self):
+        """
+            Test start public meeting when responses error 400
+        """
+        # post method
+        response = self.client.post(reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
+                        'block_id': self.block_id,
+                        'restricted_access': "False"
+                    }
+            ))
+        self.assertEqual(response.status_code, 400)
+        # anonymous user
+        aux_client = Client()
+        response = aux_client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
+                        'block_id': self.block_id,
+                        'restricted_access': "False"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 302)
+        # wrong block id
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
+                        'block_id': 'asdasdsad',
+                        'restricted_access': "False"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 400)
+        # wrong type
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"asd",
+                        'meeting_id': "meeting_id",
+                        'block_id': self.block_id,
+                        'restricted_access': "asd"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 400)
+
+        EolZoomMappingUserMeet.objects.create(meeting_id="meeting_id", user=self.user, title="I am a title", is_enabled=True)
+        #wrong user
+        response = self.client_2.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "meeting_id",
+                        'block_id': self.block_id,
+                        'restricted_access': "True"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 400)
+        # meet id dont exists
+        response = self.client.get(
+            reverse(
+                'start_public_meeting',
+                    kwargs={
+                        'email_notification':"True",
+                        'meeting_id': "asdasxzc",
+                        'block_id': self.block_id,
+                        'restricted_access': "True"
+                    }
+            )
+        )
+        self.assertEqual(response.status_code, 400)
 
     def test_get_student_join_url(self):
         """
@@ -771,6 +1009,681 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
         response = self.client.get(reverse('get_student_join_url'), get_data)
         self.assertEqual(response.json(), {'status': True, 'join_url': 'url2'})
 
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch("eolzoom.views.get_join_url")
+    @patch("eolzoom.views.meeting_registrant")
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_private(self, post, patch, check_yt, meeting_registrant, get_join_url):
+        """
+            Test event_zoom_youtube normal process  
+        """
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        meeting_registrant.side_effect = [True]
+        get_join_url.side_effect = [{
+            "page_count": 1,
+            "page_number": 1,
+            "page_size": 1,
+            "total_records": 2,
+            "registrants": [
+                {
+                    "email": "email1",
+                    "join_url": "join_url1"
+                },
+                {
+                    "email": "email2",
+                    "join_url": "join_url2"
+                }
+            ],
+        }]
+        check_yt.return_value = True
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=True,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=True
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 200)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_public(self, post, patch, check_yt):
+        """
+            Test event_zoom_youtube normal process  
+        """
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        check_yt.return_value = True
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=True
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 200)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    def test_event_zoom_wrong_authorization(self):
+        """
+            Test event_zoom if authorization is wrong
+        """
+        headers={'Authorization': 'Bearer wrong1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    def test_event_zoom_not_authorization(self):
+        """
+            Test event_zoom if authorization is empty
+        """
+        headers={}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    def test_event_zoom_wrong_event(self):
+        """
+            Test event_zoom if event is not 'meeting.started'
+        """
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.ended",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    def test_event_zoom_meet_not_exists(self):
+        """
+            Test event_zoom if meeting dont exists  
+        """
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(meeting_id="098765", user=self.user, is_enabled=True)
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch("requests.post")
+    def test_event_zoom_fail_access_token(self, post):
+        """
+            Test event_zoom if fail get access token from zoom
+        """
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                400, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=True)
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_youtube_fail_start_live(self, post, patch, check_yt):
+        """
+            Test event_zoom if fail update status livestream in zoom meeting 
+        """
+        check_yt.return_value = True
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code",])(400,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    def test_event_zoom_get(self):
+        """
+            Test event_zoom if request is get 
+        """
+        request = TestRequest()
+        request.method = 'GET'
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_youtube_re_start(self, post, patch, check_yt, stream_dict):
+        """
+            Test event_zoom(youtube) normal process if meeting is re open
+        """
+        check_yt.return_value = False
+        stream_dict.return_value = {
+            "id": "09876",
+            "stream_key": "this-is-a-stream-key",
+            "stream_server": "a-stream-server",
+            'broadcast_id': "youtube_id_2"
+        }
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response),  namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), namedtuple("Request", ["status_code", ])(204,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        user_model = EolZoomMappingUserMeet.objects.get(meeting_id="1234", user=self.user, is_enabled=True)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(user_model.broadcast_ids, "youtube_id youtube_id_2")
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.post")
+    def test_event_zoom_youtube_re_start_fail_check(self, post, check_yt):
+        """
+            Test event_zoom_youtube if meeting is re open and fail in check_status_live_youtube
+        """
+        check_yt.return_value = None
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response)]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.post")
+    def test_event_zoom_youtube_re_start_fail_create(self, post, check_yt, stream_dict):
+        """
+            Test event_zoom(youtube) if meeting is re open and fail in create new live
+        """
+        check_yt.return_value = False
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response)]
+        stream_dict.return_value = None
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_youtube_re_start_fail_update_meeting(self, post, patch, check_yt, stream_dict):
+        """
+            Test event_zoom if meeting is re open and fail in update data stream in meeting
+        """
+        check_yt.return_value = False
+        stream_dict.return_value = {
+            "id": "09876",
+            "stream_key": "this-is-a-stream-key",
+            "stream_server": "a-stream-server",
+            'broadcast_id': "youtube_id_2"
+        }
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(400,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    @patch('eolzoom.utils_youtube.create_live_in_youtube')
+    @patch('eolzoom.utils_youtube.check_status_live_youtube')
+    @patch("requests.patch")
+    @patch("requests.post")
+    def test_event_zoom_youtube_re_start_fail_update_status(self, post, patch, check_yt, stream_dict):
+        """
+            Test event_zoom if meeting is re open and fail in update status meeting
+        """
+        check_yt.return_value = False
+        stream_dict.return_value = {
+            "id": "09876",
+            "stream_key": "this-is-a-stream-key",
+            "stream_server": "a-stream-server",
+            'broadcast_id': "youtube_id_2"
+        }
+        response = {
+            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
+            "token_type": "bearer",
+            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
+            "expires_in": 3599,
+            "scope": "user:read:admin"
+        }
+        post.side_effect = [
+            namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response),  namedtuple(
+                "Request", [
+                    "status_code", "json"])(
+                200, lambda:response), ]
+        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), namedtuple("Request", ["status_code", ])(400,), ]
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=True,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=True
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 400)
+
+    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
+    def test_event_zoom_youtube_user_not_enabled(self):
+        """
+            Test event_zoom if user not enabled youtube livestream  
+        """
+        headers={'Authorization': '1234567890asdfgh'}
+        post_data = {
+            "event": "meeting.started",
+            "payload": {
+                "account_id": "o8KK_AAACq6BBEyA70CA",
+                "object": {
+                    "id": "1234",
+                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
+                    }
+                }
+            }
+        EolZoomMappingUserMeet.objects.create(
+            meeting_id="1234", 
+            user=self.user, 
+            broadcast_ids="youtube_id", 
+            title="I am a title", 
+            is_enabled=False,
+            restricted_access=False,
+            course_key=self.course.id,
+            usage_key=UsageKey.from_string(self.block_id),
+            email_notification=False
+            )
+        request = TestRequest()
+        request.method = 'POST'
+        data = json.dumps(post_data).encode('utf-8')
+        request.body = data
+        request.user = AnonymousUser()
+        request.headers = headers
+        request.params = post_data
+        result = views.event_zoom(request)
+        self.assertEqual(result.status_code, 200)
 
 class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
 
@@ -1916,499 +2829,6 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
         data = json.loads(result.content.decode())
         self.assertEqual(data['status'], 'error')
 
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.patch")
-    @patch("requests.post")
-    def test_event_zoom_youtube(self, post, patch, check_yt):
-        """
-            Test event_zoom_youtube normal process  
-        """
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        check_yt.return_value = True
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 200)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    def test_event_zoom_youtube_wrong_authorization(self):
-        """
-            Test event_zoom_youtube if authorization is wrong  
-        """
-        headers={'Authorization': 'Bearer wrong1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    def test_event_zoom_youtube_not_authorization(self):
-        """
-            Test event_zoom_youtube if authorization is empty  
-        """
-        headers={'Authorization': 'Bearer wrong1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    def test_event_zoom_youtube_wrong_event(self):
-        """
-            Test event_zoom_youtube if event is not 'meeting.started'
-        """
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.ended",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    def test_event_zoom_youtube_meet_not_exists(self):
-        """
-            Test event_zoom_youtube if meeting dont exists  
-        """
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        EolZoomMappingUserMeet.objects.create(meeting_id="098765", user=self.user, is_enabled=True)
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.post")
-    def test_event_zoom_youtube_fail_access_token(self, post, check_yt):
-        """
-            Test event_zoom_youtube if fail get access token from zoom
-        """
-        check_yt.return_value = True
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                400, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code",])(204,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=True)
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.patch")
-    @patch("requests.post")
-    def test_event_zoom_youtube_fail_start_live(self, post, patch, check_yt):
-        """
-            Test event_zoom_youtube if fail update status livestream in zoom meeting 
-        """
-        check_yt.return_value = True
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code",])(400,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=True)
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    def test_event_zoom_youtube_get(self):
-        """
-            Test event_zoom_youtube if request is get 
-        """
-        request = TestRequest()
-        request.method = 'GET'
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.create_live_in_youtube')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.patch")
-    @patch("requests.post")
-    def test_event_zoom_youtube_re_start(self, post, patch, check_yt, stream_dict):
-        """
-            Test event_zoom_youtube normal process if meeting is re open
-        """
-        check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        stream_dict.return_value = {
-            "id": "09876",
-            "stream_key": "this-is-a-stream-key",
-            "stream_server": "a-stream-server",
-            'broadcast_id': "youtube_id_2"
-        }
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response),  namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), namedtuple("Request", ["status_code", ])(204,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        user_model = EolZoomMappingUserMeet.objects.get(meeting_id="1234", user=self.user, is_enabled=True)
-        self.assertEqual(result.status_code, 200)
-        self.assertEqual(user_model.broadcast_ids, "youtube_id youtube_id_2")
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    def test_event_zoom_youtube_re_start_fail_check(self, check_yt):
-        """
-            Test event_zoom_youtube if meeting is re open and fail in check_status_live_youtube
-        """
-        check_yt.return_value = None
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.create_live_in_youtube')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    def test_event_zoom_youtube_re_start_fail_create(self, check_yt, stream_dict):
-        """
-            Test event_zoom_youtube if meeting is re open and fail in create new live
-        """
-        check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        stream_dict.return_value = None
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.create_live_in_youtube')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.patch")
-    @patch("requests.post")
-    def test_event_zoom_youtube_re_start_fail_update_meeting(self, post, patch, check_yt, stream_dict):
-        """
-            Test event_zoom_youtube if meeting is re open and fail in update data stream in meeting
-        """
-        check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        stream_dict.return_value = {
-            "id": "09876",
-            "stream_key": "this-is-a-stream-key",
-            "stream_server": "a-stream-server",
-            'broadcast_id': "youtube_id_2"
-        }
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code", ])(400,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    @patch('eolzoom.utils_youtube.create_live_in_youtube')
-    @patch('eolzoom.utils_youtube.check_status_live_youtube')
-    @patch("requests.patch")
-    @patch("requests.post")
-    def test_event_zoom_youtube_re_start_fail_update_status(self, post, patch, check_yt, stream_dict):
-        """
-            Test event_zoom_youtube if meeting is re open and fail in update status meeting
-        """
-        check_yt.return_value = False
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, broadcast_ids="youtube_id", title="I am a title", is_enabled=True)
-        EolZoomAuth.objects.create(user=self.user, zoom_refresh_token='test_refresh_token')
-        stream_dict.return_value = {
-            "id": "09876",
-            "stream_key": "this-is-a-stream-key",
-            "stream_server": "a-stream-server",
-            'broadcast_id': "youtube_id_2"
-        }
-        response = {
-            "access_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjE1ODAxNTA1OTMsInRva2VuVHlwZSI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTU4MDE0Njk5MywianRpIjoiPEpUST4iLCJ0b2xlcmFuY2VJZCI6MjV9.F9o_w7_lde4Jlmk_yspIlDc-6QGmVrCbe_6El-xrZehnMx7qyoZPUzyuNAKUKcHfbdZa6Q4QBSvpd6eIFXvjHw",
-            "token_type": "bearer",
-            "refresh_token": "eyJhbGciOiJIUzUxMiIsInYiOiIyLjAiLCJraWQiOiI8S0lEPiJ9.eyJ2ZXIiOiI2IiwiY2xpZW50SWQiOiI8Q2xpZW50X0lEPiIsImNvZGUiOiI8Q29kZT4iLCJpc3MiOiJ1cm46em9vbTpjb25uZWN0OmNsaWVudGlkOjxDbGllbnRfSUQ-IiwiYXV0aGVudGljYXRpb25JZCI6IjxBdXRoZW50aWNhdGlvbl9JRD4iLCJ1c2VySWQiOiI8VXNlcl9JRD4iLCJncm91cE51bWJlciI6MCwiYXVkIjoiaHR0cHM6Ly9vYXV0aC56b29tLnVzIiwiYWNjb3VudElkIjoiPEFjY291bnRfSUQ-IiwibmJmIjoxNTgwMTQ2OTkzLCJleHAiOjIwNTMxODY5OTMsInRva2VuVHlwZSI6InJlZnJlc2hfdG9rZW4iLCJpYXQiOjE1ODAxNDY5OTMsImp0aSI6IjxKVEk-IiwidG9sZXJhbmNlSWQiOjI1fQ.Xcn_1i_tE6n-wy6_-3JZArIEbiP4AS3paSD0hzb0OZwvYSf-iebQBr0Nucupe57HUDB5NfR9VuyvQ3b74qZAfA",
-            "expires_in": 3599,
-            "scope": "user:read:admin"
-        }
-        post.side_effect = [
-            namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response),  namedtuple(
-                "Request", [
-                    "status_code", "json"])(
-                200, lambda:response), ]
-        patch.side_effect = [namedtuple("Request", ["status_code", ])(204,), namedtuple("Request", ["status_code", ])(400,), ]
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 400)
-
-    @override_settings(EOLZOOM_EVENT_AUTHORIZATION = '1234567890asdfgh')
-    def test_event_zoom_youtube_user_not_enabled(self):
-        """
-            Test event_zoom_youtube if user not enabled youtube livestream  
-        """
-        headers={'Authorization': '1234567890asdfgh'}
-        post_data = {
-            "event": "meeting.started",
-            "payload": {
-                "account_id": "o8KK_AAACq6BBEyA70CA",
-                "object": {
-                    "id": "1234",
-                    "host_id": "uLoRgfbbTayCX6r2Q_qQsQ",
-                    }
-                }
-            }
-        EolZoomMappingUserMeet.objects.create(meeting_id="1234", user=self.user, is_enabled=False)
-        request = TestRequest()
-        request.method = 'POST'
-        data = json.dumps(post_data).encode('utf-8')
-        request.body = data
-        request.headers = headers
-        request.params = post_data
-        result = youtube_views.event_zoom_youtube(request)
-        self.assertEqual(result.status_code, 200)
-    
     @patch("requests.get")
     @patch("requests.patch")
     @patch("requests.post")

@@ -155,30 +155,6 @@ def callback_google_auth(request):
         'custom_live_streaming_service': data['livestream_zoom']})
     return HttpResponseRedirect(next_url)
 
-def event_zoom_youtube(request):
-    """
-        Start livestreams in youtube if youtube livestrem is enabled
-    """
-    if not utils_youtube.check_event_zoom_params(request):
-        return HttpResponse(status=400)
-    data = json.loads(request.body.decode())
-    id_meet = data['payload']['object']['id']
-    if data['event'] == "meeting.started":
-        try:
-            user_model = EolZoomMappingUserMeet.objects.get(meeting_id=id_meet)
-            if user_model.is_enabled:
-                response = utils_youtube.start_live_youtube(user_model)
-                if response is None or response['live'] != 'ok':
-                    return HttpResponse(status=400)
-            else:
-                logger.info("User {} dont have enabled youtube livestream in Xblock, meeting_id: {}".format(user_model.user, user_model.meeting_id))
-            return HttpResponse(status=200)
-        except EolZoomMappingUserMeet.DoesNotExist:
-            logger.error("Dont exists mapping user-meeting, Meeting {}".format(id_meet))
-            return HttpResponse(status=400)
-    logger.error("Event is not Started, event: {}, id_meeting: {}".format(data['event'], id_meet))
-    return HttpResponse(status=400)
-
 def create_livebroadcast(request):
     """
         Create the livestream in youtube and set stream data in zoom meeting

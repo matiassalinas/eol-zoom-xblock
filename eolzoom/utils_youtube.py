@@ -249,16 +249,17 @@ def bind_broadcast(youtube, broadcast_id, stream_id):
         bind_broadcast_response["contentDetails"]["boundStreamId"]))
 
 
-def update_meeting_youtube(user, stream_dict, meet_id):
+def update_meeting_youtube(user, stream_dict, meet_id, access_token=None):
     """
         Set livestreams youtube in zoom meeting
     """
-    refresh_token = _get_refresh_token(user)
-    token = get_access_token(user, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}, meet_id: {}, user: {}".format(token['error'], meet_id, user))
-        return None
-    access_token = token['access_token']
+    if access_token is None:
+        refresh_token = _get_refresh_token(user)
+        token = get_access_token(user, refresh_token)
+        if 'error' in token:
+            logger.error("Error get_access_token {}, meet_id: {}, user: {}".format(token['error'], meet_id, user))
+            return None
+        access_token = token['access_token']
     headers = {
         "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
@@ -300,7 +301,7 @@ def check_event_zoom_params(request):
     return True
 
 
-def start_live_youtube(user_model):
+def start_live_youtube(user_model, access_token):
     """
         Verify status livebroadcast and update status livestream in zoom meeting
     """
@@ -310,21 +311,15 @@ def start_live_youtube(user_model):
     if check_yt is None:
         return None
     if check_yt == False:
-        status = create_new_live(user_model)
+        status = create_new_live(user_model, access_token)
         if status is None:
             return None
-    return patch_meeting_zoom_start(user, meet_id)
+    return patch_meeting_zoom_start(user, meet_id, access_token)
 
-def patch_meeting_zoom_start(user, meet_id):
+def patch_meeting_zoom_start(user, meet_id, access_token):
     """
         Update status livestream in zoom meeting
     """
-    refresh_token = _get_refresh_token(user)
-    token = get_access_token(user, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}, user: {}, meet_id: {}".format(token['error'],user, meet_id))
-        return None
-    access_token = token['access_token']
     headers = {
         "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
@@ -350,7 +345,7 @@ def patch_meeting_zoom_start(user, meet_id):
         response["live"] = "error to start live with zoom meeting"
     return response
 
-def create_new_live(user_model):
+def create_new_live(user_model, access_token=None):
     """
         Create new livestream in youtube and update stream data in zoom meeting
     """
@@ -365,7 +360,8 @@ def create_new_live(user_model):
     status = update_meeting_youtube(
         user_model.user,
         livebroadcast_data,
-        user_model.meeting_id)
+        user_model.meeting_id,
+        access_token)
     if status:
         save = save_broadcast_id(user_model.meeting_id, livebroadcast_data['broadcast_id'])
         if save:

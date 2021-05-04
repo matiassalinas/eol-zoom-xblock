@@ -416,6 +416,7 @@ def start_meeting(request):
 
     return HttpResponseRedirect(create_start_url(args['meeting_id']))
 
+@transaction.non_atomic_requests
 def event_zoom(request):
     """
         -Start a meeting with registrants (only hoster can do)
@@ -465,7 +466,6 @@ def event_zoom(request):
     logger.error("EolZoom - Event is not Started, event: {}, id_meeting: {}".format(data['event'], id_meet))
     return HttpResponse(status=400)
 
-@transaction.non_atomic_requests
 def start_meeting_event(request, user, meeting_id, course_id, block_id, access_token, email_notification):
     """
         Start a meeting with registrants (only hoster can do)

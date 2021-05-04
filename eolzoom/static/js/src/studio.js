@@ -220,7 +220,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         $('.save-button').hide();
         $(element).find('#eolzoom_loading_youtube').hide();
         $(element).find('#youtube_validate_strong').hide();
-        check_is_logged_google();
+        //check_is_logged_google();
         check_is_logged();
         get_login_url();
 
@@ -298,11 +298,11 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     }
                     if(!data.livestream_zoom){
                         aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no tiene habilitado 'Servicio personalizado de transmisión en vivo' en zoom.</span>"
-                        aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
+                        aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' target='_blank' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     if(!data.livestream || !data.channel){
-                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' target='_blank' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     $(element).find('#google_access_warning').html(aux_msg);

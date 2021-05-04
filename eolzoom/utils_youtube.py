@@ -149,19 +149,12 @@ def insert_broadcast(youtube, start_time, title):
         Create a liveBroadcast resource and set its title, scheduled start time,
         and privacy status.
     """
-    """
-        ***For Python >= 3.7 use this code and replace next block code***
-        from django.utils import timezone
-        now = timezone.now()
-        start_time_utc = dt.fromisoformat(start_time) or dt.strptime(start_time, "%Y-%m-%dT%H:%M:%S%z")
-        if start_time_utc < now:
-            start_time = str(dt.now())
-    """
-    # --- For Python < 3.7 
-    start_time_utc = datetime_to_utc(start_time)
-    if start_time_utc < dt.utcnow():
-        start_time = str(dt.now())
-    # ---
+    from django.utils import timezone
+    now = timezone.now()
+    start_time_utc = dt.fromisoformat(start_time)
+    if start_time_utc < now:
+        start_time = dt.now().strftime("%Y-%m-%dT%H:%M:%S%z") + '+00:00'
+
     insert_broadcast_response = youtube.liveBroadcasts().insert(
         part="snippet,status,contentDetails",
         body=dict(
@@ -517,19 +510,11 @@ def update_live_in_youtube(youtube, start_time, title, id_live):
     """
         Update livestreams youtube with new data
     """
-    """
-        ***For Python >= 3.7 use this code and replace next block code***
-        from django.utils import timezone
-        now = timezone.now()
-        start_time_utc = dt.fromisoformat(start_time) or dt.strptime(start_time, "%Y-%m-%dT%H:%M:%S%z")
-        if start_time_utc < now:
-            start_time = str(dt.now())
-    """
-    # --- For Python < 3.7 
-    start_time_utc = datetime_to_utc(start_time)
-    if start_time_utc < dt.utcnow():
-        start_time = str(dt.now())
-    # ---
+    from django.utils import timezone
+    now = timezone.now()
+    start_time_utc = dt.fromisoformat(start_time)
+    if start_time_utc < now:
+        start_time = dt.now().strftime("%Y-%m-%dT%H:%M:%S%z") + '+00:00'
     try:
         request = youtube.liveBroadcasts().update(
             part="id,snippet",

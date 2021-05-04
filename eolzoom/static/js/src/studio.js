@@ -220,7 +220,7 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         $('.save-button').hide();
         $(element).find('#eolzoom_loading_youtube').hide();
         $(element).find('#youtube_validate_strong').hide();
-        //check_is_logged_google();
+        check_is_logged_google();
         check_is_logged();
         get_login_url();
 

@@ -100,4 +100,9 @@ urlpatterns = (
         csrf_exempt(event_zoom),
         name='event_zoom',
     ),
+    url(
+        r'^zoom/event_zoom_youtube',
+        csrf_exempt(event_zoom),
+        name='event_zoom_youtube',
+    ),
 )

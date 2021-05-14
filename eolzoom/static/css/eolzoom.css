@@ -122,7 +122,7 @@
     color: #155724 !important;
 }
 
-.eolzoom_alert2 {
+.eolzoom_alert .alert-info  {
     background-color: #cce5ff;
     border-color: #b8daff;
     color: #004085 !important;

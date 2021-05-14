@@ -30,6 +30,7 @@ from django.shortcuts import render
 from .email_tasks import meeting_start_email
 from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from opaque_keys.edx.keys import CourseKey, UsageKey
+from opaque_keys import InvalidKeyError
 from six import text_type
 
 from openedx.core.djangoapps.site_configuration import helpers as configuration_helpers
@@ -107,7 +108,7 @@ def new_scheduled_meeting(request):
     # check method and params
     if request.method != "POST":
         return HttpResponse(status=400)
-    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
+    if 'email_notification' not in request.POST or 'block_id' not in request.POST or 'course_id' not in request.POST or 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
         return HttpResponse(status=400)
 
     user_id = 'me'
@@ -124,7 +125,7 @@ def update_scheduled_meeting(request):
     # check method and params
     if request.method != "POST":
         return HttpResponse(status=400)
-    if 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'meeting_id' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
+    if 'email_notification' not in request.POST or 'block_id' not in request.POST or 'course_id' not in request.POST or 'display_name' not in request.POST or 'description' not in request.POST or 'date' not in request.POST or 'time' not in request.POST or 'duration' not in request.POST or 'meeting_id' not in request.POST or 'restricted_access' not in request.POST or 'google_access' not in request.POST:
         return HttpResponse(status=400)
 
     meeting_id = request.POST['meeting_id']
@@ -140,6 +141,12 @@ def set_scheduled_meeting(request, url, api_method):
     user = request.user
     refresh_token = _get_refresh_token(user)
     token = get_access_token(user, refresh_token)
+    try:
+        course_id = CourseKey.from_string(request.POST['course_id'])
+        block_id = UsageKey.from_string(request.POST['block_id'])
+    except InvalidKeyError:
+        logger.error("EolZoom: Error with course_id or usage_key, course_id {}, usage_key: {}".format(request.POST['course_id'], request.POST['block_id']))
+        return HttpResponse(status=400)
     if 'error' in token:
         logger.error("Error get_access_token {}".format(token['error']))
         return HttpResponse(status=400)
@@ -195,7 +202,15 @@ def set_scheduled_meeting(request, url, api_method):
             }
             google_access = request.POST['google_access'] == 'true'
             EolZoomMappingUserMeet.objects.create(
-                meeting_id=data['id'], user=user, title=topic, is_enabled=google_access)
+                meeting_id=data['id'], 
+                user=user, 
+                title=topic, 
+                is_enabled=google_access,
+                course_key=course_id,
+                restricted_access=request.POST['restricted_access'] == 'true',
+                email_notification=request.POST['email_notification'] == 'true',
+                usage_key=block_id
+                )
         else:
             return HttpResponse(status=r.status_code)
     elif api_method == 'PATCH':
@@ -211,7 +226,14 @@ def set_scheduled_meeting(request, url, api_method):
             google_access = request.POST['google_access'] == 'true'
             EolZoomMappingUserMeet.objects.update_or_create(
                 meeting_id=meeting_id, user=user,
-                defaults={'title': topic, 'is_enabled':google_access})
+                defaults={
+                    'title': topic, 
+                    'is_enabled': google_access,
+                    'course_key': course_id,
+                    'restricted_access': request.POST['restricted_access'] == 'true',
+                    'email_notification': request.POST['email_notification'] == 'true',
+                    'usage_key': block_id
+                    })
         else:
             return HttpResponse(status=r.status_code)
     return JsonResponse(response)
@@ -338,13 +360,15 @@ def _generate_password():
     return ''.join(random.choice(lettersAndDigits) for i in range(10))
 
 
-@transaction.non_atomic_requests
 def start_meeting(request):
     """
         Start a meeting with registrants (only hoster can do)
     """
     # check method and params
     if request.method != "GET":
+        return HttpResponse(status=400)
+    if request.user.is_anonymous:
+        logger.error("EolZoom: User is Anonymous")
         return HttpResponse(status=400)
     if 'code' not in request.GET or 'data' not in request.GET:
         return HttpResponse(status=400)
@@ -354,6 +378,33 @@ def start_meeting(request):
     # data with meeting_id and course_id (BASE64)
     data = base64.b64decode(request.GET.get('data'))
     args = json.loads(data.decode("utf-8"))
+    aux = ['block_id', 'course_id', 'meeting_id', 'restricted_access', 'email_notification']
+    if not all([x in args for x in aux]):
+        logger.error("EolZoom: Error with data: {}".format(args))
+        return HttpResponse(status=400)
+    try:
+        usage_key = UsageKey.from_string(args['block_id'])
+        course_key = CourseKey.from_string(args['course_id'])
+    except InvalidKeyError:
+        logger.error("EolZoom: Error with course_id or usage_key, data: {}".format(args))
+        return HttpResponse(status=400)
+    if type(args['restricted_access']) is not bool or type(args['email_notification']) is not bool:
+        logger.error("EolZoom: Error with data(restricted_access or email_notification): {}".format(args))
+        return HttpResponse(status=400)
+    try:
+        meeting_id = args['meeting_id']
+        zoom_mapp = EolZoomMappingUserMeet.objects.get(meeting_id=meeting_id)
+        if user != zoom_mapp.user:
+            logger.error("EolZoom: Error in start_meeting, request.user != user_model.user, request.user: {}, user_model.user: {}".format(user, zoom_mapp.user))
+            return HttpResponse(status=400)
+        zoom_mapp.course_key = usage_key.course_key
+        zoom_mapp.restricted_access = args['restricted_access']
+        zoom_mapp.email_notification = args['email_notification']
+        zoom_mapp.usage_key = usage_key
+        zoom_mapp.save()
+    except EolZoomMappingUserMeet.DoesNotExist:
+        logger.error("EolZoom: Error with EolZoomMappingUserMeet dont exists, meeting_id: {}".format(meeting_id))
+        return HttpResponse(status=400)
     redirect_uri = request.build_absolute_uri().split(
         '&code')[0]  # build uri without code param
     #redirect_uri = redirect_uri.replace('http', 'https')
@@ -362,38 +413,119 @@ def start_meeting(request):
         logger.error("Error get_refresh_token {}".format(token['error']))
         return HttpResponse(status=400)
     _update_auth(user, token['refresh_token'])
+
+    return HttpResponseRedirect(create_start_url(args['meeting_id']))
+
+@transaction.non_atomic_requests
+def event_zoom(request):
+    """
+        -Start a meeting with registrants (only hoster can do)
+        -Start a meeting WITHOUT registrants
+            It will send an email to all enrolled students and redirect the meeting host to Zoom
+        -Start livestreams in youtube if youtube livestrem is enabled
+    """
+    from .utils_youtube import check_event_zoom_params, start_live_youtube
+    if not check_event_zoom_params(request):
+        return HttpResponse(status=400)
+    data = json.loads(request.body.decode())
+    id_meet = data['payload']['object']['id']
+    if data['event'] == "meeting.started":
+        try:
+            access_token = None
+            user_model = EolZoomMappingUserMeet.objects.get(meeting_id=id_meet)
+            if user_model.usage_key is None:
+                logger.error("EolZoom - user_model(EolZoomMappingUserMeet) is not up to date, meeting_id: {}".format(id_meet))
+                return HttpResponse(status=400)
+            user = user_model.user
+            request.user = user_model.user
+            if user_model.restricted_access or user_model.is_enabled:
+                refresh_token = _get_refresh_token(user)
+                token = get_access_token(user, refresh_token)
+                if 'error' in token:
+                    logger.error("EolZoom - Error get_access_token {}, user: {}, meet_id: {}".format(token['error'],user, id_meet))
+                    return HttpResponse(status=400)
+                access_token = token['access_token']
+            try:
+                if user_model.restricted_access:
+                    start_meeting_event(request, user, id_meet, str(user_model.course_key), str(user_model.usage_key), access_token, user_model.email_notification)
+                else:
+                    start_public_meeting_event(user, str(user_model.usage_key), user_model.email_notification, id_meet)
+            except Exception as e:
+                logger.error("EolZoom - Error in start_meeting_event or start_public_meeting_event, user_model {}, exception: {}".format(user_model, str(e)))
+                return HttpResponse(status=400)
+            if user_model.is_enabled:
+                response = start_live_youtube(user_model, access_token)
+                if response is None or response['live'] != 'ok':
+                    return HttpResponse(status=400)
+            else:
+                logger.info("User {} dont have enabled youtube livestream in Xblock, meeting_id: {}".format(user_model.user, user_model.meeting_id))
+            return HttpResponse(status=200)
+        except EolZoomMappingUserMeet.DoesNotExist:
+            logger.error("EolZoom - Dont exists mapping user-meeting, Meeting {}".format(id_meet))
+            return HttpResponse(status=400)
+    logger.error("EolZoom - Event is not Started, event: {}, id_meeting: {}".format(data['event'], id_meet))
+    return HttpResponse(status=400)
+
+def start_meeting_event(request, user, meeting_id, course_id, block_id, access_token, email_notification):
+    """
+        Start a meeting with registrants (only hoster can do)
+    """
     # Task register meeting users. If already running pass
     try:
         task_register_meeting_users(
             request,
-            request.user,
-            args['meeting_id'],
-            args['course_id'],
-            args['block_id'])
+            user,
+            meeting_id,
+            course_id,
+            block_id,
+            access_token,
+            email_notification)
     except AlreadyRunningError:
         pass
-    return HttpResponseRedirect(create_start_url(args['meeting_id']))
 
-def start_public_meeting(request, block_id, meeting_id):
+def start_public_meeting(request, email_notification, meeting_id, block_id, restricted_access):
+    # check method and params
+    if request.method != "GET":
+        return HttpResponse(status=400)
+    if request.user.is_anonymous:
+        logger.error("EolZoom: User is Anonymous")
+        return HttpResponse(status=400)
+    try:
+        usage_key = UsageKey.from_string(block_id)
+    except InvalidKeyError:
+        logger.error("EolZoom: Error with usage_key: {}".format(block_id))
+        return HttpResponse(status=400)
+    if email_notification not in ['True', 'False'] or restricted_access not in ['True', 'False']:
+        logger.error("EolZoom: Error with restricted_access: {} or email_notification: {}".format(restricted_access, email_notification))
+        return HttpResponse(status=400)
+    try:
+        zoom_mapp = EolZoomMappingUserMeet.objects.get(meeting_id=meeting_id)
+        if request.user != zoom_mapp.user:
+            logger.error("EolZoom: Error in start_meeting, request.user != user_model.user, request.user: {}, user_model.user: {}".format(request.user, zoom_mapp.user))
+            return HttpResponse(status=400)
+        zoom_mapp.course_key = usage_key.course_key
+        zoom_mapp.restricted_access = restricted_access == 'True'
+        zoom_mapp.email_notification = email_notification == 'True'
+        zoom_mapp.usage_key = usage_key
+        zoom_mapp.save()
+    except EolZoomMappingUserMeet.DoesNotExist:
+        logger.error("EolZoom: Error with EolZoomMappingUserMeet dont exists, meeting_id: {}".format(meeting_id))
+        return HttpResponse(status=400)
+    return HttpResponseRedirect(create_start_url(meeting_id))
+
+def start_public_meeting_event(user, block_id, email_notification, meeting_id):
     """
         Start a meeting WITHOUT registrants
         It will send an email to all enrolled students and redirect the meeting host to Zoom
     """
-    # check method and params
-    if request.method != "GET":
-        return HttpResponse(status=400)
-    # block_id will be "None" if xblock.email_notification is False
-    if block_id != "None":
+    if email_notification:
         usage_key = UsageKey.from_string(block_id)
         course_id = usage_key.course_key
-        enrolled_students = get_students(request.user, text_type(course_id))
+        enrolled_students = get_students(user, text_type(course_id))
         for student in enrolled_students:
             meeting_start_email.delay(block_id, student.email)
 
-    return HttpResponseRedirect(create_start_url(meeting_id))
-
-
-def task_register_meeting_users(request, user_meeting, meeting_id, course_id, block_id):
+def task_register_meeting_users(request, user_meeting, meeting_id, course_id, block_id, access_token, email_notification):
     """
         Task Configurations
     """
@@ -404,7 +536,9 @@ def task_register_meeting_users(request, user_meeting, meeting_id, course_id, bl
         'user_meeting_id': user_meeting.id,
         'meeting_id': meeting_id,
         'course_id': course_id,
-        'block_id': block_id}
+        'block_id': block_id,
+        'access_token': access_token,
+        'email_notification': email_notification}
     task_key = meeting_id
     return submit_task(
         request,
@@ -438,16 +572,8 @@ def register_meeting_users(
     user_meeting = User.objects.get(id=user_meeting_id)
     meeting_id = task_input["meeting_id"]
     block_id = task_input["block_id"]
-
-    refresh_token = _get_refresh_token(user_meeting)
-    token = get_access_token(user_meeting, refresh_token)
-    if 'error' in token:
-        logger.error("Error get_access_token {}".format(token['error']))
-        return {
-            'error': 'Error get_access_token'
-        }
-    access_token = token['access_token']
-
+    access_token = task_input["access_token"]
+    email_notification = task_input["email_notification"]
     enrolled_students = get_students(user_meeting, text_type(course_id))
     threads = []
     for i in range(0, len(enrolled_students), MAX_REGISTRANT_STATUS):
@@ -467,11 +593,11 @@ def register_meeting_users(
         meeting_id,
         text_type(course_id),
         access_token)
-    _submit_join_url(registrants, meeting_id, block_id)
+    _submit_join_url(registrants, meeting_id, block_id, email_notification)
     logger.warning("Register Meeting Users Meeting: {}".format(meeting_id))
 
 
-def _submit_join_url(registrants, meeting_id, block_id):
+def _submit_join_url(registrants, meeting_id, block_id, email_notification):
     """
         Create EolZoomRegistrant with student join_url
     """
@@ -483,8 +609,7 @@ def _submit_join_url(registrants, meeting_id, block_id):
             join_url=student['join_url']
         )
         # send_mail
-        # block_id will be "None" if xblock.email_notification is False
-        if block_id != "None":
+        if email_notification:
             meeting_start_email.delay(block_id, student['email'])
 
 

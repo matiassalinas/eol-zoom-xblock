@@ -14,7 +14,9 @@ function EolZoomAuthorXBlock(runtime, element, settings) {
             args = {
                 'meeting_id' : settings.meeting_id,
                 'course_id' : settings.course_id,
-                'block_id' : settings.location
+                'block_id' : settings.block_id,
+                'restricted_access' : settings.restricted_access,
+                'email_notification' : settings.email_notification
             }
             data = JSON.stringify(args)
             redirect_uri = encodeURIComponent(window.location.protocol + "//" + window.location.hostname + settings.url_start_meeting)+ "?data=" + btoa(data);

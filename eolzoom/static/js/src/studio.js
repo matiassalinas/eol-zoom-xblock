@@ -41,6 +41,8 @@ function EolZoomStudioXBlock(runtime, element, settings) {
         form_data.append('restricted_access', restricted_access);
         form_data.append('email_notification', email_notification);
         form_data.append('google_access', google_access);
+        form_data.append('course_id', settings.course_id);
+        form_data.append('block_id', settings.block_id);
 
         /*
         * Set update meeting url if already have a meeting_id
@@ -296,11 +298,11 @@ function EolZoomStudioXBlock(runtime, element, settings) {
                     }
                     if(!data.livestream_zoom){
                         aux_msg = aux_msg + "</br><span style='color:red'>Cuenta no tiene habilitado 'Servicio personalizado de transmisión en vivo' en zoom.</span>"
-                        aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
+                        aux_msg = aux_msg + "</br><a href='https://uchile.zoom.us/profile/setting' target='_blank' >Presiona aquí (Zoom)</a> y habilite la opción 'Servicio personalizado de transmisión en vivo' ubicado en 'En la reunión (Avanzada)' y guarde la configuración."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     if(!data.livestream || !data.channel){
-                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
+                        aux_msg = aux_msg + "</br><a href='https://www.youtube.com/features' target='_blank' >Presiona aquí (Youtube)</a> para verificar si está habilitada la opción 'Transmisiones en vivo incorporadas' (si tienes problemas, contacta a la mesa de ayuda de la plataforma)."
                         $(element).find('input[name=youtube_permission_enabled]').val("0");
                     }
                     $(element).find('#google_access_warning').html(aux_msg);

@@ -4,7 +4,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-
+from opaque_keys.edx.django.models import CourseKeyField, UsageKeyField
 
 class EolZoomAuth(models.Model):
     """
@@ -64,6 +64,10 @@ class EolZoomMappingUserMeet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     broadcast_ids = models.CharField(max_length=255, default="")
     is_enabled = models.BooleanField(default=False)
+    restricted_access = models.BooleanField(default=False)
+    course_key = CourseKeyField(max_length=255, default=None)
+    usage_key = UsageKeyField(max_length=255, default=None)
+    email_notification = models.BooleanField(default=False)
     title = models.CharField(max_length=250, default="")
 
     def __str__(self):

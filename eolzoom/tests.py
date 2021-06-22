@@ -10,14 +10,14 @@ import base64
 from django.test import TestCase, Client
 from django.urls import reverse
 
-from util.testing import UrlResetMixin
+from common.djangoapps.util.testing import UrlResetMixin
 from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from xmodule.modulestore.tests.factories import CourseFactory
-from student.tests.factories import UserFactory, CourseEnrollmentFactory
+from common.djangoapps.student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xblock.field_data import DictFieldData
-from student.roles import CourseStaffRole
+from common.djangoapps.student.roles import CourseStaffRole
 from opaque_keys.edx.keys import CourseKey, UsageKey
 from django.test.utils import override_settings
 from .eolzoom import EolZoomXBlock
@@ -70,7 +70,7 @@ class TestEolZoomAPI(UrlResetMixin, ModuleStoreTestCase):
 
         # Patch the comment client user save method so it does not try
         # to create a new cc user when creating a django user
-        with patch('student.models.cc.User.save'):
+        with patch('common.djangoapps.student.models.cc.User.save'):
             uname = 'student'
             email = 'student@edx.org'
             password = 'test'
@@ -1720,7 +1720,7 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.xblock = self.make_an_xblock()
         # Patch the comment client user save method so it does not try
         # to create a new cc user when creating a django user
-        with patch('student.models.cc.User.save'):
+        with patch('common.djangoapps.student.models.cc.User.save'):
             uname = 'student'
             email = 'student@edx.org'
             password = 'test'
@@ -1953,7 +1953,7 @@ class TestEmailTask(UrlResetMixin, ModuleStoreTestCase):
 
         # Patch the comment client user save method so it does not try
         # to create a new cc user when creating a django user
-        with patch('student.models.cc.User.save'):
+        with patch('common.djangoapps.student.models.cc.User.save'):
             uname = 'student'
             email = 'student@edx.org'
             password = 'test'
@@ -1994,7 +1994,7 @@ class TestEolYouTubeAPI(UrlResetMixin, ModuleStoreTestCase):
 
         # Patch the comment client user save method so it does not try
         # to create a new cc user when creating a django user
-        with patch('student.models.cc.User.save'):
+        with patch('common.djangoapps.student.models.cc.User.save'):
             uname = 'student'
             email = 'student@edx.org'
             password = 'test'

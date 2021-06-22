@@ -244,7 +244,7 @@ class EolZoomXBlock(XBlock):
         """
         Get a count of all students enrolled to course
         """
-        from student.models import CourseEnrollment
+        from common.djangoapps.student.models import CourseEnrollment
         course_key = CourseKey.from_string(course_id)
         students = CourseEnrollment.objects.filter(
             course_id=course_key,

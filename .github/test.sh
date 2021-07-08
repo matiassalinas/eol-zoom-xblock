@@ -18,4 +18,3 @@ DJANGO_SETTINGS_MODULE=lms.envs.test EDXAPP_TEST_MONGO_HOST=mongodb pytest eolzo
 rm -rf test_root
 
 genbadge coverage
-mv coverage-badge.svg reports/coverage

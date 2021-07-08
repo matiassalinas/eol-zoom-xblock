@@ -17,8 +17,4 @@ jobs:
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
-    - name: Generate coverage badge
-      run: |
-        genbadge coverage
-        mv coverage-badge.svg reports/coverage
     

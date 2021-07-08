@@ -17,4 +17,6 @@ jobs:
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
+    - name: Move coverage badge file
+      run: mv coverage-badge.svg reports/coverage
     

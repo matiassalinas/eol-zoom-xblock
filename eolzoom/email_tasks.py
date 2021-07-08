@@ -18,7 +18,7 @@ EMAIL_DEFAULT_RETRY_DELAY = 30
 EMAIL_MAX_RETRIES = 5
 
 @task(
-    queue='edx.lms.core.low',
+    queue='edx.lms.core.high',
     default_retry_delay=EMAIL_DEFAULT_RETRY_DELAY,
     max_retries=EMAIL_MAX_RETRIES)
 def meeting_start_email(block_id, user_email):

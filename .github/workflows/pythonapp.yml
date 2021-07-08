@@ -19,7 +19,8 @@ jobs:
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
     - name: Relocate coverage badge
       run: |
-        mv /openedx/requirements/eolzoom/coverage-badge.svg /reports/coverage
+        mkdir /reports/coverage 
+        mv coverage-badge.svg /reports/coverage
     - name: Push changes
       run: |
         git config --global user.name "eolito"

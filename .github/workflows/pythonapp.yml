@@ -9,9 +9,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Install genbadge dependency
-      run: |
-        pip install genbadge[coverage]
     - name: Create coverage config file
       run: |
         touch .coveragerc
@@ -20,8 +17,5 @@ jobs:
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
-    - name: Create and move coverage badge file
-      run: |
-        genbadge coverage
-        mv coverage-badge.svg reports/coverage
+        
     

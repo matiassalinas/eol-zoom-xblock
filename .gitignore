@@ -40,6 +40,9 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+reports/
+.coveragerc
+setup.cfg
 nosetests.xml
 *,cover
 .hypothesis/

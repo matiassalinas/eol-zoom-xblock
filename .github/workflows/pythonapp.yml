@@ -17,7 +17,6 @@ jobs:
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
-        cd ..
     - name: Push changes
       run: |
         git config --global user.name "eolito"
@@ -25,5 +24,4 @@ jobs:
         git add coverage-badge.svg
         git commit -m "Update coverage badge"
         git push https://konialtamirano:${{ secrets.GITHUB_TOKEN }}@github.com/eol-uchile/eol-zoom-xblock.git HEAD:master
-       
-    
+        echo "success"

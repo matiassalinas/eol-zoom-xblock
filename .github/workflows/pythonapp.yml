@@ -17,6 +17,7 @@ jobs:
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
+        cd ..
     - name: Push changes
       run: |
         git config --global user.name "eolito"

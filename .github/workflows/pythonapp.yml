@@ -9,7 +9,20 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Create coverage config file
+      run: |
+        touch .coveragerc
+        echo -e "[run] \nomit = eolzoom/migrations/*" > .coveragerc
     - name: Run Tests
       run: |
         cd .github/
         docker-compose run lms /openedx/requirements/eolzoom/.github/test.sh
+    - name: Push changes
+      run: |
+        git config --global user.name "eolito"
+        git config --global user.email 'eol-uchile@users.noreply.github.com'
+        git add coverage-badge.svg
+        git commit -m "Update coverage badge"
+        git push https://konialtamirano:${{ secrets.GITHUB_TOKEN }}@github.com/eol-uchile/eol-zoom-xblock.git HEAD:master
+       
+    

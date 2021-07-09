@@ -41,9 +41,9 @@ htmlcov/
 .coverage.*
 .cache
 nosetests.xml
-coverage.xml
 *,cover
 .hypothesis/
+.pytest_cache/
 
 # Translations
 *.pot
@@ -62,7 +62,6 @@ target/
 
 #OSX
 *.DS_Store
-
 
 # .bak files
 *.bak

@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
 
   lms:
-    image: ghcr.io/eol-uchile/edx-platform:testing-lilac
+    image: ghcr.io/eol-virtuallabx/edx-platform:test
     volumes:
       - ../:/openedx/requirements/eolzoom
     depends_on:

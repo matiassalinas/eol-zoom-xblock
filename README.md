@@ -1,8 +1,14 @@
-# EOL Zoom XBlock
+# Norteamericano Zoom XBlock
 
-![https://github.com/eol-uchile/eol-zoom-xblock/actions](https://github.com/eol-uchile/eol-zoom-xblock/workflows/Python%20application/badge.svg) ![Coverage Status](https://github.com/eol-uchile/eol-zoom-xblock/blob/master/coverage-badge.svg)
+![https://github.com/eol-virtuallabx/norteamericano-zoom-xblock/actions](https://github.com/eol-virtuallabx/norteamericano-zoom-xblock/workflows/Python%20application/badge.svg) ![Coverage Status](https://github.com/eol-virtuallabx/norteamericano-zoom-xblock/blob/master/coverage-badge.svg)
 
 XBlock and API to integrate zoom with the Open edX LMS. Editable within Open edx Studio.
+
+# TO-DO
+
+[ ] Setup google/youtube
+[ ] Youtube tests
+[ ] Enable youtube on studio view
 
 # Install
 

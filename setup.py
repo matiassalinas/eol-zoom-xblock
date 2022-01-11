@@ -24,8 +24,8 @@ def package_data(pkg, roots):
 
 setup(
     name='eolzoom-xblock',
-    version='0.2',
-    description='Zoom integration with EOL (OpenEdx)',
+    version='0.2.1',
+    description='Zoom integration with Norteamericano-EOL (OpenEdx)',
     license='AGPL v3',
     packages=[
         'eolzoom',

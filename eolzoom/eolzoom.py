@@ -18,7 +18,7 @@ from xblock.core import XBlock
 from xblock.fields import Integer, Scope, String, DateTime, Boolean
 from xblock.fragment import Fragment
 from opaque_keys.edx.keys import CourseKey
-
+from openedx.core.djangoapps.theming.helpers import get_current_request
 # Make '_' a no-op so we can scrape strings
 
 
@@ -165,7 +165,8 @@ class EolZoomXBlock(XBlock):
 
     def studio_view(self, context=None):
         context_html = self.get_context()
-        context_html['user_id'] = self._edited_by
+        myrequest = get_current_request()
+        context_html['user_id'] = myrequest.user.id
         template = self.render_template(
             'static/html/studio.html', context_html)
         frag = Fragment(template)
@@ -179,7 +180,7 @@ class EolZoomXBlock(XBlock):
             'enrolled_students': enrolled_students,
             'created_by': self.created_by,
             'edx_created_by': self.edx_created_by,
-            'user_id': self._edited_by,
+            'user_id': myrequest.user.id,
             'course_id': text_type(self.scope_ids.usage_id.course_key),
             'block_id': self.location,
             'start_url': self.start_url,
@@ -289,6 +290,7 @@ class EolZoomXBlock(XBlock):
 
     @XBlock.handler
     def studio_submit(self, request, suffix=''):
+        myrequest = get_current_request()
         self.display_name = request.params['display_name']
         self.description = request.params['description']
         self.date = request.params['date']
@@ -304,7 +306,7 @@ class EolZoomXBlock(XBlock):
         self.broadcast_id = request.params['broadcast_id']
         self.meeting_password = request.params['meeting_password']
         self.created_location = self.location._to_string()
-        self.edx_created_by = self._edited_by
+        self.edx_created_by = myrequest.user.id
         return Response({'result': 'success'})
 
     def get_status(self, is_lms):

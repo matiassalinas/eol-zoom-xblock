@@ -1899,7 +1899,9 @@ class TestEolZoomXBlock(UrlResetMixin, ModuleStoreTestCase):
         self.assertIn('class="button button-blue join_meeting-btn"',
                       author_view_html)  # 'Ingresar a la sala' button
 
-    def test_studio_submit(self):
+    @patch('eolzoom.eolzoom.get_current_request')
+    def test_studio_submit(self, mock_request):
+        mock_request.return_value = Mock()
         request = TestRequest()
         request.method = 'POST'
         post_data = {

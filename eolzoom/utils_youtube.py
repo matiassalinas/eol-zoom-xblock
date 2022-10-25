@@ -31,10 +31,6 @@ import sys
 from urllib.parse import urlencode
 from apiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
-import google.oauth2.credentials
-import google_auth_oauthlib.flow
-import googleapiclient.discovery
-from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from datetime import datetime as dt
 import datetime
 
@@ -399,7 +395,7 @@ def create_youtube_object(user):
     if not data['channel'] or not data['livestream'] or credentials_dict is None:
         logger.error("User dont have youtube permission, user: {}".format(user))
         return None
-
+    import googleapiclient.discovery
     credentials = cretentials_dict_to_object(credentials_dict)
     youtube = googleapiclient.discovery.build(
         'youtube', 'v3', credentials=credentials, cache_discovery=False)
@@ -410,6 +406,7 @@ def cretentials_dict_to_object(credentials_dict):
     """
         Return Credentials object
     """
+    import google.oauth2.credentials
     credentials = google.oauth2.credentials.Credentials(
         token=credentials_dict["token"],
         refresh_token=credentials_dict["refresh_token"],
@@ -423,6 +420,7 @@ def check_permission_youtube(credentials_dict, user):
     """
         Verify if user have channel and live permission in Youtube
     """
+    import googleapiclient.discovery
     credentials = cretentials_dict_to_object(credentials_dict)
     data = {'channel': False, 'livestream': False, 'credentials': True, 'livestream_zoom': False}
     youtube = googleapiclient.discovery.build(

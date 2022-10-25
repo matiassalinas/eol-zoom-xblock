@@ -33,7 +33,6 @@ import sys
 from apiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
 import google.oauth2.credentials
-import google_auth_oauthlib.flow
 import googleapiclient.discovery
 from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from datetime import datetime as dt
@@ -71,6 +70,7 @@ def auth_google(request):
     # Use the client_secret.json file to identify the application requesting
     # authorization. The client ID (from that file) and access scopes are
     # required.
+    import google_auth_oauthlib.flow
     flow = google_auth_oauthlib.flow.Flow.from_client_config(
         client_config=CLIENT_CONFIG,
         scopes=SCOPES)
@@ -115,6 +115,7 @@ def callback_google_auth(request):
     # Use the client_secret.json file to identify the application requesting
     # authorization. The client ID (from that file) and access scopes are
     # required.
+    import google_auth_oauthlib.flow
     try:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(
             client_config=CLIENT_CONFIG,

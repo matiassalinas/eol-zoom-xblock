@@ -38,13 +38,6 @@ from openedx.core.djangoapps.site_configuration import helpers as configuration_
 import httplib2
 import os
 import sys
-
-from apiclient.errors import HttpError
-
-import google.oauth2.credentials
-import google_auth_oauthlib.flow
-import googleapiclient.discovery
-from oauthlib.oauth2.rfc6749.errors import InvalidGrantError
 from datetime import datetime as dt
 import datetime
 import random

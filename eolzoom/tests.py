@@ -7,29 +7,28 @@ from collections import namedtuple
 import json
 import base64
 
-from django.test import TestCase, Client
+from django.test import Client
 from django.urls import reverse
 
 from common.djangoapps.util.testing import UrlResetMixin
-from xmodule.modulestore import ModuleStoreEnum
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 
 from xmodule.modulestore.tests.factories import CourseFactory
 from common.djangoapps.student.tests.factories import UserFactory, CourseEnrollmentFactory
 from xblock.field_data import DictFieldData
 from common.djangoapps.student.roles import CourseStaffRole
-from opaque_keys.edx.keys import CourseKey, UsageKey
+from opaque_keys.edx.keys import UsageKey
 from django.test.utils import override_settings
 from .eolzoom import EolZoomXBlock
 from django.contrib.auth.models import AnonymousUser
 from six import text_type
 import urllib.parse
-from urllib.parse import parse_qs
-from . import views, youtube_views, utils_youtube, email_tasks
+from . import views, utils_youtube, email_tasks
 from .models import EolZoomAuth, EolZoomRegistrant, EolGoogleAuth, EolZoomMappingUserMeet
 from datetime import datetime as dt
 import datetime
 import logging
+
 logger = logging.getLogger(__name__)
 
 XBLOCK_RUNTIME_USER_ID = 99
